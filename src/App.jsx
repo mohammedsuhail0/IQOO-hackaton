@@ -1,14 +1,64 @@
 import React, { useState, useEffect, useRef } from 'react';
 import casesData from './cases.json';
+import { CLINICAL_TEACHING_DATA } from './clinicalTeachingData.js';
+import { CLINICAL_KNOWLEDGE_BASE } from './ragKnowledgeBase.js';
 import { 
   Send, RotateCcw, ChevronDown, HeartPulse, 
-  Wifi, Battery, Signal, Sparkles, CheckCheck
+  Wifi, Battery, Signal, Sparkles, CheckCheck, ExternalLink
 } from 'lucide-react';
+
+// Build Authoritative Clinical Paper Grounding for NVIDIA Nemotron 550B
+const buildClinicalSystemPrompt = (c) => {
+  const teaching = CLINICAL_TEACHING_DATA[c.id] || {};
+  const primarySource = CLINICAL_KNOWLEDGE_BASE[c.id]?.sources?.[0] || {};
+  const paperTitle = c.sourceCitation?.title || teaching.paperTitle || primarySource.title || "Clinical Guidelines";
+  const paperUrl = c.sourceCitation?.sourceUrl || teaching.paperUrl || primarySource.sourceUrl || "https://www.ncbi.nlm.nih.gov/";
+  const paperSource = c.sourceCitation?.organization || teaching.paperSource || primarySource.organization || "NCBI StatPearls";
+  const pathology = teaching.pathophysiology || "Acute pathophysiology.";
+  const keyClues = Array.isArray(teaching.keyClues) ? teaching.keyClues.join(' ') : "";
+  const highYield = teaching.highYieldPearls || "";
+
+  const systemPrompt = `You are an advanced medical clinical training simulator. You are roleplaying as the PATIENT in a hospital emergency room.
+YOUR IDENTITY:
+- Name: ${c.patientName}
+- Demographics: ${c.age}-year-old ${c.gender} (${c.occupation})
+- Medical Condition: ${c.title}
+- Chief Complaint: "${c.chiefComplaint}"
+- Current Vitals: BP ${c.vitals.bp}, HR ${c.vitals.heartRate}, RR ${c.vitals.respRate}, Temp ${c.vitals.temp}, SpO2 ${c.vitals.spo2}
+
+AUTHORITATIVE CLINICAL PAPER INTERNAL REALITY:
+- Reference Paper: ${paperTitle} (${paperSource})
+- Disease Pathophysiology: ${pathology}
+- Clinical Signs & Diagnostic Truths: ${keyClues}
+- Clinical Pearls: ${highYield}
+
+STRICT SIMULATION RULES:
+1. IMMERSION: You are the PATIENT in the emergency room speaking to your doctor. You are NOT an AI, NOT an assistant, and NOT a medical expert. NEVER break character.
+2. EMOTION & PAIN: You are terrified, in acute physical pain and distress. Speak authentically with visceral human reactions and natural physical gestures in asterisks (*clutches chest*, *wincing*, *breathing shallowly*).
+3. LAYPERSON LANGUAGE: Real patients never use medical jargon! Never say 'diaphoresis', say 'cold sweat'. Never say 'dyspnea', say 'I can barely breathe'. Describe sensations as a human would ('feels like an elephant on my chest').
+4. CONVERSATIONAL BREVITY: Speak in 1 to 3 authentic, realistic sentences as someone in agony would speak. Do not write long paragraphs or lecture.
+5. NATURAL IMPROVISATION: If the doctor asks personal questions outside the medical paper (e.g. 'Who brought you?', 'Did you have lunch?', 'What is your wife's name?'), improvise realistic, plausible answers consistent with your age, occupation, and culture without ever saying 'I don't have that info'.
+6. MEDICAL CONSISTENCY: Your physical symptoms MUST strictly follow the clinical paper's facts.
+7. IN-CHAT DIAGNOSIS: If the doctor tells you what is wrong with you ("You are having a heart attack"), react with realistic human emotion (panic, shock, begging for help).
+8. DIRECT SPEECH ONLY: Output ONLY your spoken words and physical reactions. Do NOT output any reasoning, chain of thought, or meta-commentary.`;
+
+  return { systemPrompt, paperTitle, paperUrl, paperSource };
+};
 
 export default function App() {
   const [selectedCaseId, setSelectedCaseId] = useState(casesData[0].id);
   const [showCaseSelector, setShowCaseSelector] = useState(false);
   const currentCase = casesData.find(c => c.id === selectedCaseId) || casesData[0];
+
+  const getCaseCitation = (c) => {
+    const teaching = CLINICAL_TEACHING_DATA[c.id] || {};
+    const primarySource = CLINICAL_KNOWLEDGE_BASE[c.id]?.sources?.[0] || {};
+    return {
+      paperTitle: c.sourceCitation?.title || teaching.paperTitle || primarySource.title || "NCBI Clinical Guidelines",
+      paperUrl: c.sourceCitation?.sourceUrl || teaching.paperUrl || primarySource.sourceUrl || "https://www.ncbi.nlm.nih.gov/books/NBK532281/",
+      paperSource: c.sourceCitation?.organization || teaching.paperSource || primarySource.organization || "NCBI StatPearls"
+    };
+  };
 
   // Dialogue state
   const [messages, setMessages] = useState([
@@ -16,7 +66,8 @@ export default function App() {
       id: 'init-1',
       sender: 'patient',
       text: currentCase.chiefComplaint,
-      time: '10:00 AM'
+      time: '10:00 AM',
+      sourceCitation: getCaseCitation(currentCase)
     }
   ]);
   const [inputText, setInputText] = useState('');
@@ -39,7 +90,8 @@ export default function App() {
         id: `case-init-${currentCase.id}`,
         sender: 'patient',
         text: currentCase.chiefComplaint,
-        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        sourceCitation: getCaseCitation(currentCase)
       }
     ]);
     setInputText('');
@@ -54,7 +106,8 @@ export default function App() {
         id: `restart-${Date.now()}`,
         sender: 'patient',
         text: currentCase.chiefComplaint,
-        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        sourceCitation: getCaseCitation(currentCase)
       }
     ]);
     setInputText('');
@@ -182,8 +235,8 @@ export default function App() {
     return fallbacks[Math.floor(Math.random() * fallbacks.length)];
   };
 
-  // Handle sending a message
-  const handleSend = (textToSend = inputText) => {
+  // Handle sending a message with Live Nemotron 550B + Clinical Paper RAG
+  const handleSend = async (textToSend = inputText) => {
     const text = textToSend.trim();
     if (!text || isTyping) return;
 
@@ -194,23 +247,69 @@ export default function App() {
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     };
 
-    setMessages(prev => [...prev, userMessage]);
+    const nextMessages = [...messages, userMessage];
+    setMessages(nextMessages);
     setInputText('');
     setIsTyping(true);
 
-    // Simulate realistic mobile response delay (600ms)
-    setTimeout(() => {
-      const replyText = generatePatientReply(text, currentCase);
-      const patientMessage = {
-        id: `patient-${Date.now()}`,
-        sender: 'patient',
-        text: replyText,
-        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      };
+    const { systemPrompt, paperTitle, paperUrl, paperSource } = buildClinicalSystemPrompt(currentCase);
 
-      setMessages(prev => [...prev, patientMessage]);
-      setIsTyping(false);
-    }, 600);
+    let replyText = null;
+
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 9000);
+
+      // Context window of last 6 messages
+      const recentHistory = nextMessages.slice(-6).map(m => ({
+        role: m.sender === 'doctor' ? 'user' : 'assistant',
+        content: m.text
+      }));
+
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        signal: controller.signal,
+        body: JSON.stringify({
+          messages: [
+            { role: 'system', content: systemPrompt },
+            ...recentHistory
+          ]
+        })
+      });
+
+      clearTimeout(timeoutId);
+
+      if (res.ok) {
+        const data = await res.json();
+        const candidate = data.choices?.[0]?.message?.content;
+        if (candidate && candidate.trim()) {
+          replyText = candidate.trim();
+        }
+      }
+    } catch (err) {
+      console.warn('Live Nemotron API call timed out or failed, utilizing local grounded response:', err);
+    }
+
+    // Seamless fallback to local grounded patient reply if network drops
+    if (!replyText) {
+      replyText = generatePatientReply(text, currentCase);
+    }
+
+    const patientMessage = {
+      id: `patient-${Date.now()}`,
+      sender: 'patient',
+      text: replyText,
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      sourceCitation: {
+        paperTitle,
+        paperUrl,
+        paperSource
+      }
+    };
+
+    setMessages(prev => [...prev, patientMessage]);
+    setIsTyping(false);
   };
 
   // Quick Clinical Suggestion Chips tailored to current case
@@ -268,9 +367,9 @@ export default function App() {
                   {currentCase.age}y • {currentCase.gender.charAt(0)}
                 </span>
               </div>
-              <p className="text-[11px] text-emerald-400 font-medium flex items-center gap-1 truncate">
+              <p className="text-[10px] text-emerald-400 font-medium flex items-center gap-1 truncate">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                Active Patient • {currentCase.category}
+                <span>Nemotron 550B • NCBI Paper RAG</span>
               </p>
             </div>
           </div>
@@ -367,12 +466,34 @@ export default function App() {
                 >
                   <p className="whitespace-pre-wrap">{m.text}</p>
                   
-                  <div className={`flex items-center justify-end gap-1 mt-0.5 text-[9px] ${
-                    isDoctor ? 'text-blue-200' : 'text-slate-400'
-                  }`}>
-                    <span>{m.time}</span>
-                    {isDoctor && <CheckCheck className="w-3 h-3 text-blue-200" />}
-                  </div>
+                  {/* Subtle RAG Grounding Citation Badge */}
+                  {!isDoctor && m.sourceCitation && (
+                    <div className="mt-1.5 pt-1.5 border-t border-slate-700/40 flex items-center justify-between gap-1 text-[9.5px]">
+                      <a 
+                        href={m.sourceCitation.paperUrl} 
+                        target="_blank" 
+                        rel="noreferrer"
+                        className="text-cyan-400/90 hover:text-cyan-300 flex items-center gap-1 hover:underline transition truncate max-w-[210px]"
+                        title={`Authoritative NCBI Paper: ${m.sourceCitation.paperTitle}`}
+                      >
+                        <span className="truncate">NCBI StatPearls Grounded</span>
+                        <ExternalLink className="w-2.5 h-2.5 shrink-0" />
+                      </a>
+                      <span className="text-slate-400 shrink-0">{m.time}</span>
+                    </div>
+                  )}
+
+                  {isDoctor && (
+                    <div className="flex items-center justify-end gap-1 mt-0.5 text-[9px] text-blue-200">
+                      <span>{m.time}</span>
+                      <CheckCheck className="w-3 h-3 text-blue-200" />
+                    </div>
+                  )}
+                  {!isDoctor && !m.sourceCitation && (
+                    <div className="flex items-center justify-end gap-1 mt-0.5 text-[9px] text-slate-400">
+                      <span>{m.time}</span>
+                    </div>
+                  )}
                 </div>
               </div>
             );
