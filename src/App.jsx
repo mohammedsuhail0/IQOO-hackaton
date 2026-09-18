@@ -232,43 +232,43 @@ export default function App() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#070b14] text-slate-100 flex items-center justify-center sm:p-4">
+    <div className="fixed inset-0 w-full h-full bg-[#070b14] text-slate-100 flex items-center justify-center p-0 sm:p-2 overflow-hidden select-none">
       {/* Android Device Shell Frame (Edge-to-edge on mobile, sleek frame on desktop) */}
-      <div className="w-full sm:max-w-[420px] h-[100dvh] sm:h-[860px] bg-[#0c1220] sm:border-[8px] sm:border-slate-800 sm:rounded-[44px] sm:shadow-2xl flex flex-col overflow-hidden relative">
+      <div className="w-full sm:max-w-[410px] h-full sm:h-[min(760px,calc(100dvh-1rem))] bg-[#0c1220] sm:border-[6px] sm:border-slate-800 sm:rounded-[36px] sm:shadow-2xl flex flex-col overflow-hidden relative">
         
         {/* Android Native Status Bar */}
-        <div className="h-7 bg-[#0c1220] px-5 flex items-center justify-between text-xs text-slate-400 font-medium select-none z-20">
+        <div className="h-6 bg-[#0c1220] px-4 flex items-center justify-between text-[11px] text-slate-400 font-medium select-none z-20 shrink-0">
           <span>10:00</span>
           {/* Top Notch / Camera Punch-hole on desktop preview */}
-          <div className="hidden sm:block w-3.5 h-3.5 bg-black rounded-full border border-slate-700/50 mx-auto"></div>
-          <div className="flex items-center gap-2">
-            <Signal className="w-3.5 h-3.5 text-slate-400" />
-            <Wifi className="w-3.5 h-3.5 text-slate-400" />
-            <Battery className="w-4 h-4 text-slate-300" />
+          <div className="hidden sm:block w-3 h-3 bg-black rounded-full border border-slate-700/50 mx-auto"></div>
+          <div className="flex items-center gap-1.5">
+            <Signal className="w-3 h-3 text-slate-400" />
+            <Wifi className="w-3 h-3 text-slate-400" />
+            <Battery className="w-3.5 h-3.5 text-slate-300" />
           </div>
         </div>
 
         {/* Android Top App Bar */}
-        <div className="bg-[#0f172a] border-b border-slate-800/80 px-4 py-3 flex items-center justify-between gap-3 z-10 shadow-md">
+        <div className="bg-[#0f172a] border-b border-slate-800/80 px-3 py-2 flex items-center justify-between gap-2 z-10 shadow-md shrink-0">
           {/* Patient Profile Info */}
-          <div className="flex items-center gap-3 min-w-0 flex-1">
+          <div className="flex items-center gap-2.5 min-w-0 flex-1">
             <div className="relative">
-              <div className="w-11 h-11 rounded-full bg-gradient-to-tr from-blue-600 to-cyan-500 flex items-center justify-center text-white font-semibold text-base shadow-inner">
+              <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-blue-600 to-cyan-500 flex items-center justify-center text-white font-semibold text-sm shadow-inner">
                 {currentCase.patientName.charAt(0)}
               </div>
-              <span className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 border-2 border-[#0f172a] rounded-full"></span>
+              <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 border-2 border-[#0f172a] rounded-full"></span>
             </div>
 
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1.5">
-                <h1 className="font-semibold text-slate-100 text-sm truncate">
+                <h1 className="font-semibold text-slate-100 text-xs truncate">
                   {currentCase.patientName}
                 </h1>
                 <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20 font-medium whitespace-nowrap">
                   {currentCase.age}y • {currentCase.gender.charAt(0)}
                 </span>
               </div>
-              <p className="text-xs text-emerald-400 font-medium flex items-center gap-1 truncate">
+              <p className="text-[11px] text-emerald-400 font-medium flex items-center gap-1 truncate">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
                 Active Patient • {currentCase.category}
               </p>
@@ -280,25 +280,25 @@ export default function App() {
             <button
               onClick={() => setShowCaseSelector(!showCaseSelector)}
               title="Switch Patient Case"
-              className="p-2 rounded-full hover:bg-slate-800 text-slate-300 transition flex items-center gap-1 text-xs border border-slate-700/60"
+              className="px-2.5 py-1 rounded-full hover:bg-slate-800 text-slate-300 transition flex items-center gap-1 text-xs border border-slate-700/60"
             >
               <span>Cases</span>
-              <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showCaseSelector ? 'rotate-180' : ''}`} />
+              <ChevronDown className={`w-3 h-3 transition-transform ${showCaseSelector ? 'rotate-180' : ''}`} />
             </button>
 
             <button
               onClick={handleRestart}
               title="Restart Patient Consultation"
-              className="p-2 rounded-full hover:bg-slate-800 text-slate-400 hover:text-slate-200 transition"
+              className="p-1.5 rounded-full hover:bg-slate-800 text-slate-400 hover:text-slate-200 transition"
             >
-              <RotateCcw className="w-4 h-4" />
+              <RotateCcw className="w-3.5 h-3.5" />
             </button>
           </div>
         </div>
 
         {/* Case Switcher Dropdown Modal / Drawer */}
         {showCaseSelector && (
-          <div className="absolute top-[88px] left-0 right-0 bg-[#0f172a]/95 backdrop-blur-md border-b border-slate-700/80 p-3 z-30 shadow-2xl max-h-[380px] overflow-y-auto">
+          <div className="absolute top-[80px] left-0 right-0 bg-[#0f172a]/95 backdrop-blur-md border-b border-slate-700/80 p-3 z-30 shadow-2xl max-h-[340px] overflow-y-auto">
             <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider px-2 mb-2 flex items-center justify-between">
               <span>Select Patient Case (10 Total)</span>
               <span className="text-blue-400">{casesData.length} Cases</span>
@@ -332,9 +332,9 @@ export default function App() {
         )}
 
         {/* Patient Vitals Quick Bar */}
-        <div className="bg-[#0b101c] border-b border-slate-800/60 px-4 py-1.5 flex items-center justify-between text-[11px] text-slate-400 overflow-x-auto whitespace-nowrap gap-3 scrollbar-none">
+        <div className="bg-[#0b101c] border-b border-slate-800/60 px-3.5 py-1 flex items-center justify-between text-[10.5px] text-slate-400 overflow-x-auto whitespace-nowrap gap-2.5 scrollbar-none shrink-0">
           <span className="flex items-center gap-1 font-medium text-slate-300">
-            <HeartPulse className="w-3.5 h-3.5 text-rose-500" />
+            <HeartPulse className="w-3 h-3 text-rose-500" />
             HR: <strong className="text-slate-200">{currentCase.vitals.heartRate}</strong>
           </span>
           <span>BP: <strong className="text-slate-200">{currentCase.vitals.bp}</strong></span>
@@ -342,12 +342,12 @@ export default function App() {
           <span>Temp: <strong className="text-slate-200">{currentCase.vitals.temp}</strong></span>
         </div>
 
-        {/* Message Stream */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-3.5 scrollbar-thin">
+        {/* Message Stream with min-h-0 to avoid pushing bottom bar */}
+        <div className="flex-1 min-h-0 overflow-y-auto p-3 space-y-2.5 scrollbar-thin">
           {/* Medical Privacy & Simulation Banner */}
-          <div className="text-center my-2">
-            <span className="text-[11px] bg-slate-800/80 text-slate-400 border border-slate-700/50 px-3 py-1 rounded-full inline-block">
-              Clinical OSCE Simulation Session Started
+          <div className="text-center my-1">
+            <span className="text-[10px] bg-slate-800/80 text-slate-400 border border-slate-700/50 px-2.5 py-0.5 rounded-full inline-block">
+              Clinical OSCE Simulation Session
             </span>
           </div>
 
@@ -359,7 +359,7 @@ export default function App() {
                 className={`flex flex-col ${isDoctor ? 'items-end' : 'items-start'}`}
               >
                 <div 
-                  className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed shadow-sm transition-all ${
+                  className={`max-w-[85%] rounded-2xl px-3 py-2 text-xs leading-relaxed shadow-sm transition-all ${
                     isDoctor 
                       ? 'bg-blue-600 text-white rounded-br-xs' 
                       : 'bg-slate-800/90 text-slate-100 border border-slate-700/60 rounded-bl-xs'
@@ -367,11 +367,11 @@ export default function App() {
                 >
                   <p className="whitespace-pre-wrap">{m.text}</p>
                   
-                  <div className={`flex items-center justify-end gap-1 mt-1 text-[10px] ${
+                  <div className={`flex items-center justify-end gap-1 mt-0.5 text-[9px] ${
                     isDoctor ? 'text-blue-200' : 'text-slate-400'
                   }`}>
                     <span>{m.time}</span>
-                    {isDoctor && <CheckCheck className="w-3.5 h-3.5 text-blue-200" />}
+                    {isDoctor && <CheckCheck className="w-3 h-3 text-blue-200" />}
                   </div>
                 </div>
               </div>
@@ -381,8 +381,8 @@ export default function App() {
           {/* Animated Patient Typing Indicator */}
           {isTyping && (
             <div className="flex items-center gap-2">
-              <div className="bg-slate-800/90 border border-slate-700/60 rounded-2xl rounded-bl-xs px-4 py-3 flex items-center gap-1.5 shadow-sm">
-                <span className="text-xs text-slate-400 mr-1.5 font-medium">{currentCase.patientName} is answering</span>
+              <div className="bg-slate-800/90 border border-slate-700/60 rounded-2xl rounded-bl-xs px-3 py-2 flex items-center gap-1.5 shadow-sm">
+                <span className="text-[11px] text-slate-400 mr-1 font-medium">{currentCase.patientName} is typing</span>
                 <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-bounce"></span>
                 <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-bounce [animation-delay:0.2s]"></span>
                 <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-bounce [animation-delay:0.4s]"></span>
@@ -394,18 +394,18 @@ export default function App() {
         </div>
 
         {/* Quick Question Suggestion Chips */}
-        <div className="bg-[#0b101c] border-t border-slate-800/70 py-2 px-3">
-          <div className="flex items-center gap-1.5 mb-1.5 text-[10px] text-slate-400 font-medium px-1">
-            <Sparkles className="w-3 h-3 text-cyan-400" />
-            <span>Suggested Doctor Questions</span>
+        <div className="bg-[#0b101c] border-t border-slate-800/70 py-1.5 px-2.5 shrink-0">
+          <div className="flex items-center gap-1 mb-1 text-[9px] text-slate-400 font-medium px-1">
+            <Sparkles className="w-2.5 h-2.5 text-cyan-400" />
+            <span>Suggested Questions</span>
           </div>
-          <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 scrollbar-none">
             {quickQuestions.map((q, idx) => (
               <button
                 key={idx}
                 onClick={() => handleSend(q.text)}
                 disabled={isTyping}
-                className="shrink-0 text-xs bg-slate-800/90 hover:bg-slate-700/90 active:bg-blue-600 text-slate-300 hover:text-white border border-slate-700/60 rounded-full px-3 py-1.5 transition whitespace-nowrap shadow-xs disabled:opacity-50"
+                className="shrink-0 text-[11px] bg-slate-800/90 hover:bg-slate-700 active:bg-blue-600 text-slate-300 hover:text-white border border-slate-700/60 rounded-full px-2.5 py-1 transition whitespace-nowrap shadow-xs disabled:opacity-50"
               >
                 {q.label}
               </button>
@@ -414,7 +414,7 @@ export default function App() {
         </div>
 
         {/* Android Bottom Input Bar */}
-        <div className="bg-[#0f172a] border-t border-slate-800 px-3 py-2.5 z-10">
+        <div className="bg-[#0f172a] border-t border-slate-800 px-3 py-2 z-10 shrink-0">
           <form 
             onSubmit={(e) => {
               e.preventDefault();
@@ -427,24 +427,21 @@ export default function App() {
                 type="text"
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
-                placeholder="Ask the patient a question..."
+                placeholder="Ask patient a question..."
                 disabled={isTyping}
-                className="w-full bg-[#1e293b] text-slate-100 placeholder-slate-400 text-sm rounded-full pl-4 pr-4 py-2.5 border border-slate-700/70 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition shadow-inner disabled:opacity-50"
+                className="w-full bg-[#1e293b] text-slate-100 placeholder-slate-400 text-xs rounded-full pl-3.5 pr-3 py-2 border border-slate-700/70 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition shadow-inner disabled:opacity-50"
               />
             </div>
 
             <button
               type="submit"
               disabled={!inputText.trim() || isTyping}
-              className="w-10 h-10 rounded-full bg-blue-600 hover:bg-blue-500 active:scale-95 disabled:opacity-40 disabled:pointer-events-none flex items-center justify-center text-white transition shadow-md shrink-0"
+              className="w-8 h-8 rounded-full bg-blue-600 hover:bg-blue-500 active:scale-95 disabled:opacity-40 disabled:pointer-events-none flex items-center justify-center text-white transition shadow-md shrink-0"
               title="Send question"
             >
-              <Send className="w-4 h-4 ml-0.5" />
+              <Send className="w-3.5 h-3.5 ml-0.5" />
             </button>
           </form>
-
-          {/* Android Home Navigation Bar Pill on desktop preview */}
-          <div className="w-28 h-1 bg-slate-700/60 rounded-full mx-auto mt-2 hidden sm:block"></div>
         </div>
 
       </div>
