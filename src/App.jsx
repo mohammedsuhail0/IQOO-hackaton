@@ -1,12 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import casesData from './cases.json';
 import { CLINICAL_KNOWLEDGE_BASE, retrieveClinicalContext } from './ragKnowledgeBase.js';
+import { CLINICAL_TEACHING_DATA, detectSurrenderPhrase, detectInChatDiagnosis } from './clinicalTeachingData.js';
 import { 
   Mic, MicOff, Camera, Eye, Activity, Heart, Thermometer, 
   Stethoscope, Send, Laptop, Smartphone, Settings, Award, 
   AlertCircle, CheckCircle2, RefreshCw, Volume2, Flashlight,
   BookOpen, ShieldCheck, ExternalLink, FileText, Sparkles,
-  Search, Filter, ChevronRight, Zap, Check, AlertTriangle
+  Search, Filter, ChevronRight, Zap, Check, AlertTriangle,
+  RotateCcw, GraduationCap, ArrowRight, PlayCircle
 } from 'lucide-react';
 
 export default function App() {
@@ -50,11 +52,15 @@ export default function App() {
   const [examLog, setExamLog] = useState([]);
   const videoRef = useRef(null);
 
-  // Diagnostic Submission State
+  // Diagnostic Submission & Simulation State
   const [primaryDiagnosis, setPrimaryDiagnosis] = useState('');
   const [selectedDifferentials, setSelectedDifferentials] = useState([]);
   const [selectedOrders, setSelectedOrders] = useState([]);
   const [evaluationResult, setEvaluationResult] = useState(null);
+
+  // Simulation Lifecycle State: 'active' | 'concluded_surrender' | 'concluded_diagnosed'
+  const [simulationState, setSimulationState] = useState('active');
+  const [diagnosisOutcome, setDiagnosisOutcome] = useState(null);
 
   // RAG Source Inspector Modal State
   const [selectedSourceDetail, setSelectedSourceDetail] = useState(null);
@@ -96,6 +102,40 @@ export default function App() {
     localStorage.setItem('clinosce_api_endpoint', apiEndpoint);
   }, [apiEndpoint]);
 
+  // Restart Current Case
+  const handleRestartCase = () => {
+    setDialogue([
+      { 
+        sender: 'patient', 
+        text: currentCase.chiefComplaint, 
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        sourceRef: {
+          sourceTitle: currentCase.sourceCitation?.title || caseSources.sources[0]?.title,
+          sourceUrl: currentCase.sourceCitation?.sourceUrl || caseSources.sources[0]?.sourceUrl,
+          section: "Presenting Complaint Benchmark",
+          retrievedText: "Emergency triage protocol mandates recording baseline vitals and initial patient complaints.",
+          confidence: 0.95
+        }
+      }
+    ]);
+    setAskedKeywords(new Set());
+    setExamLog([]);
+    setEvaluationResult(null);
+    setPrimaryDiagnosis('');
+    setSelectedDifferentials([]);
+    setSelectedOrders([]);
+    setSimulationState('active');
+    setDiagnosisOutcome(null);
+    stopCamera();
+  };
+
+  // Advance to Next Clinical Case
+  const handleNextCase = () => {
+    const currentIndex = casesData.findIndex(c => c.id === selectedCaseId);
+    const nextIndex = (currentIndex + 1) % casesData.length;
+    setSelectedCaseId(casesData[nextIndex].id);
+  };
+
   // Reset state on case change
   useEffect(() => {
     setDialogue([
@@ -118,6 +158,8 @@ export default function App() {
     setPrimaryDiagnosis('');
     setSelectedDifferentials([]);
     setSelectedOrders([]);
+    setSimulationState('active');
+    setDiagnosisOutcome(null);
     stopCamera();
   }, [selectedCaseId]);
 
@@ -469,17 +511,177 @@ export default function App() {
     return fallbackVariations[rotationIndex];
   };
 
-  // Handle Send with RAG Retrieval & Patient Pretend Roleplay
+  // Handle Send with RAG Retrieval, Surrender Detection & In-Chat Diagnosis
   const handleSendMessage = async (textToSend = inputText) => {
     const query = textToSend.trim();
     if (!query) return;
 
-    const newDialogue = [
-      ...dialogue,
-      { sender: 'doctor', text: query, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }
-    ];
+    if (simulationState !== 'active') {
+      return;
+    }
+
+    const currentTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const doctorMsg = { sender: 'doctor', text: query, time: currentTime };
+    const newDialogue = [...dialogue, doctorMsg];
     setDialogue(newDialogue);
     setInputText('');
+
+    const teaching = CLINICAL_TEACHING_DATA[currentCase.id] || {};
+    const primarySource = caseSources.sources[0] || {};
+    const paperUrl = currentCase.sourceCitation?.sourceUrl || teaching.paperUrl || primarySource.sourceUrl;
+    const paperTitle = currentCase.sourceCitation?.title || teaching.paperTitle || primarySource.title;
+    const paperSource = currentCase.sourceCitation?.organization || teaching.paperSource || primarySource.organization;
+
+    // --- CHECK 1: SURRENDER DETECTION ("I don't know", "give up", etc.) ---
+    if (detectSurrenderPhrase(query)) {
+      const patientSurrenderReply = `Doctor... you don't know what's wrong with me?! (starts trembling with acute anxiety) Please call the attending physician or emergency specialist right away! I need help!`;
+      
+      const historyScore = Math.round((askedKeywords.size / currentCase.goldenQuestions.length) * 100);
+      const totalScore = Math.min(100, Math.round((askedKeywords.size / currentCase.goldenQuestions.length) * 40) + (examLog.length > 0 ? 20 : 0));
+      const missedGolden = currentCase.goldenQuestions.filter((_, idx) => !askedKeywords.has(idx));
+
+      const outcome = {
+        type: 'surrender',
+        isCorrect: false,
+        statedDiagnosis: 'Clinical Surrender (Requested Answer)',
+        trueDiagnosis: currentCase.trueDiagnosis,
+        topic: teaching.topic || currentCase.title,
+        pathophysiology: teaching.pathophysiology || "Pathology details unavailable.",
+        keyClues: teaching.keyClues || [],
+        emergencyProtocol: teaching.emergencyProtocol || currentCase.urgentOrders,
+        highYieldPearls: teaching.highYieldPearls || "",
+        paperTitle,
+        paperSource,
+        paperUrl,
+        historyScore,
+        totalScore,
+        missedGolden
+      };
+
+      setTimeout(() => {
+        setDialogue(prev => [
+          ...prev,
+          {
+            sender: 'patient',
+            text: patientSurrenderReply,
+            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            sourceRef: {
+              sourceTitle: paperTitle,
+              sourceUrl: paperUrl,
+              section: "Attending Escalation Protocol",
+              retrievedText: "Emergency triage protocol mandates immediate attending supervision when diagnostic uncertainty arises.",
+              confidence: 0.99
+            }
+          },
+          {
+            sender: 'preceptor',
+            text: `📋 Case Solved by Attending: Simulation concluded upon physician surrender. Attending physician stabilized ${currentCase.patientName}. The verified clinical case solution, disease mechanism, and authoritative NCBI guidelines are unlocked below.`,
+            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          }
+        ]);
+        setDiagnosisOutcome(outcome);
+        setSimulationState('concluded_surrender');
+        setEvaluationResult({
+          ...outcome,
+          examCount: examLog.length,
+          sourceUrl: paperUrl,
+          ragCitation: {
+            title: paperTitle,
+            org: paperSource,
+            year: currentCase.sourceCitation?.year || 2024,
+            evidence: "Class I Evidence",
+            sourceUrl: paperUrl,
+            summaryGuideline: teaching.highYieldPearls || ""
+          }
+        });
+        speakText(patientSurrenderReply);
+      }, 250);
+      return;
+    }
+
+    // --- CHECK 2: IN-CHAT DIAGNOSIS DISCLOSURE ("you are getting an heart attack", etc.) ---
+    const diagnosisDetection = detectInChatDiagnosis(query, currentCase);
+    if (diagnosisDetection) {
+      const { isCorrect, extractedDiagnosis } = diagnosisDetection;
+
+      let patientDiagReply = "";
+      if (isCorrect) {
+        if (currentCase.category === 'Cardiology') {
+          patientDiagReply = `A ${extractedDiagnosis}?! (clutches chest tightly, eyes widening in panic) Oh god doctor, please save me! Am I having a heart attack?! What are you going to do to treat me right now?!`;
+        } else {
+          patientDiagReply = `${extractedDiagnosis}?! (grimaces in pain, voice trembling) Oh god doctor, please help me! What is the treatment? Will I be okay?!`;
+        }
+      } else {
+        patientDiagReply = `${extractedDiagnosis}?! But doctor, are you sure? (looks terrified and confused) My symptoms don't feel like that at all... it feels like ${currentCase.chiefComplaint}! Shouldn't we run more tests before concluding that?!`;
+      }
+
+      const historyScore = Math.round((askedKeywords.size / currentCase.goldenQuestions.length) * 100);
+      const examBonus = examLog.length > 0 ? 20 : 0;
+      const accuracyPoints = isCorrect ? 50 : 15;
+      const totalScore = Math.min(100, Math.round((historyScore * 0.3) + examBonus + accuracyPoints));
+      const missedGolden = currentCase.goldenQuestions.filter((_, idx) => !askedKeywords.has(idx));
+
+      const outcome = {
+        type: 'diagnosed',
+        isCorrect,
+        statedDiagnosis: extractedDiagnosis,
+        trueDiagnosis: currentCase.trueDiagnosis,
+        topic: teaching.topic || currentCase.title,
+        pathophysiology: teaching.pathophysiology || "Pathology details unavailable.",
+        keyClues: teaching.keyClues || [],
+        emergencyProtocol: teaching.emergencyProtocol || currentCase.urgentOrders,
+        highYieldPearls: teaching.highYieldPearls || "",
+        paperTitle,
+        paperSource,
+        paperUrl,
+        historyScore,
+        totalScore,
+        missedGolden
+      };
+
+      setTimeout(() => {
+        setDialogue(prev => [
+          ...prev,
+          {
+            sender: 'patient',
+            text: patientDiagReply,
+            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            sourceRef: {
+              sourceTitle: paperTitle,
+              sourceUrl: paperUrl,
+              section: isCorrect ? "Diagnosis Confirmation Protocol" : "Diagnostic Discrepancy Protocol",
+              retrievedText: `Clinical guideline citation for ${currentCase.title}: ${isCorrect ? 'Disclosed diagnosis matches validated case criteria.' : 'Clinical presentation diverges from stated condition.'}`,
+              confidence: isCorrect ? 0.99 : 0.75
+            }
+          },
+          {
+            sender: 'preceptor',
+            text: isCorrect 
+              ? `🎯 Diagnosis Disclosed: '${extractedDiagnosis}' confirmed accurate! Simulation concluded with clinical precision. Review the full OSCE Teaching Debrief and emergency orders below.`
+              : `⚠️ Diagnostic Discrepancy: Doctor disclosed '${extractedDiagnosis}', but the gold-standard diagnosis for this case is '${currentCase.trueDiagnosis}'. Simulation concluded. See detailed educational critique below.`,
+            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          }
+        ]);
+        setDiagnosisOutcome(outcome);
+        setSimulationState('concluded_diagnosed');
+        setPrimaryDiagnosis(extractedDiagnosis);
+        setEvaluationResult({
+          ...outcome,
+          examCount: examLog.length,
+          sourceUrl: paperUrl,
+          ragCitation: {
+            title: paperTitle,
+            org: paperSource,
+            year: currentCase.sourceCitation?.year || 2024,
+            evidence: "Class I Evidence",
+            sourceUrl: paperUrl,
+            summaryGuideline: teaching.highYieldPearls || ""
+          }
+        });
+        speakText(patientDiagReply);
+      }, 250);
+      return;
+    }
 
     // --- STEP 1: RAG Context Retrieval ---
     const ragContext = retrieveClinicalContext(query, selectedCaseId);
@@ -590,25 +792,44 @@ STRICT RULES:
 
     const missedGolden = currentCase.goldenQuestions.filter((_, idx) => !askedKeywords.has(idx));
 
-    // Extract authoritative citations from RAG
+    const teaching = CLINICAL_TEACHING_DATA[currentCase.id] || {};
     const primarySource = caseSources.sources[0];
-    const sourceUrl = currentCase.sourceCitation?.sourceUrl || primarySource?.sourceUrl;
+    const sourceUrl = currentCase.sourceCitation?.sourceUrl || teaching.paperUrl || primarySource?.sourceUrl;
+    const paperTitle = currentCase.sourceCitation?.title || teaching.paperTitle || primarySource?.title;
+    const paperSource = currentCase.sourceCitation?.organization || teaching.paperSource || primarySource?.organization;
+
+    const outcome = {
+      type: 'diagnosed',
+      isCorrect,
+      statedDiagnosis: primaryDiagnosis,
+      trueDiagnosis: currentCase.trueDiagnosis,
+      topic: teaching.topic || currentCase.title,
+      pathophysiology: teaching.pathophysiology || "Pathology details unavailable.",
+      keyClues: teaching.keyClues || [],
+      emergencyProtocol: teaching.emergencyProtocol || currentCase.urgentOrders,
+      highYieldPearls: teaching.highYieldPearls || "",
+      paperTitle,
+      paperSource,
+      paperUrl: sourceUrl,
+      historyScore,
+      totalScore,
+      missedGolden
+    };
+
+    setDiagnosisOutcome(outcome);
+    setSimulationState('concluded_diagnosed');
 
     setEvaluationResult({
-      isCorrect,
-      totalScore,
-      historyScore,
+      ...outcome,
       examCount: examLog.length,
-      missedGolden,
-      trueDiagnosis: currentCase.trueDiagnosis,
       sourceUrl: sourceUrl,
       ragCitation: {
-        title: currentCase.sourceCitation?.title || primarySource.title,
-        org: currentCase.sourceCitation?.organization || primarySource.organization,
-        year: currentCase.sourceCitation?.year || primarySource.year,
-        evidence: primarySource.evidenceLevel || "Class I Evidence",
+        title: paperTitle,
+        org: paperSource,
+        year: currentCase.sourceCitation?.year || 2024,
+        evidence: primarySource?.evidenceLevel || "Class I Evidence",
         sourceUrl: sourceUrl,
-        summaryGuideline: primarySource.chunks[primarySource.chunks.length - 1]?.text || ""
+        summaryGuideline: teaching.highYieldPearls || primarySource?.chunks[primarySource.chunks.length - 1]?.text || ""
       }
     });
   };
@@ -1042,10 +1263,22 @@ STRICT RULES:
 
           <div className="text-right">
             <span className="text-[10px] font-mono text-slate-500 uppercase block">Simulated Patient State</span>
-            <span className="text-xs font-bold text-emerald-400 flex items-center justify-end gap-1">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
-              Active Clinical Simulation
-            </span>
+            {simulationState === 'active' ? (
+              <span className="text-xs font-bold text-emerald-400 flex items-center justify-end gap-1">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                Active Clinical Consultation
+              </span>
+            ) : simulationState === 'concluded_surrender' ? (
+              <span className="text-xs font-bold text-blue-400 flex items-center justify-end gap-1">
+                <GraduationCap className="w-3.5 h-3.5" />
+                Case Solved (Guided Learning)
+              </span>
+            ) : (
+              <span className={`text-xs font-bold flex items-center justify-end gap-1 ${diagnosisOutcome?.isCorrect ? 'text-emerald-400' : 'text-amber-400'}`}>
+                {diagnosisOutcome?.isCorrect ? <CheckCircle2 className="w-3.5 h-3.5" /> : <AlertTriangle className="w-3.5 h-3.5" />}
+                {diagnosisOutcome?.isCorrect ? 'Diagnosis Confirmed' : 'Diagnostic Discrepancy'}
+              </span>
+            )}
           </div>
         </div>
 
@@ -1127,99 +1360,311 @@ STRICT RULES:
             </button>
           </div>
 
-          {/* Tab 1: Voice Consultation with Source Grounding */}
+          {/* Tab 1: Voice Consultation with Source Grounding & Teaching Debrief */}
           {activeTab === 'history' && (
-            <div className="bg-slate-900 border border-slate-800 rounded-b-xl p-4 flex flex-col h-[520px]">
+            <div className={`bg-slate-900 border border-slate-800 rounded-b-xl p-4 flex flex-col ${simulationState === 'active' ? 'h-[520px]' : 'min-h-[520px]'}`}>
               
               {/* Dialogue Transcript */}
-              <div className="flex-1 overflow-y-auto space-y-3 pr-2 mb-3">
-                {dialogue.map((msg, i) => (
-                  <div 
-                    key={i} 
-                    className={`flex flex-col ${msg.sender === 'doctor' ? 'items-end' : 'items-start'}`}
-                  >
-                    <span className="text-[10px] text-slate-500 mb-0.5">
-                      {msg.sender === 'doctor' ? '👨‍⚕️ You (Doctor)' : `🤒 Patient: ${currentCase.patientName}`} • {msg.time}
-                    </span>
-                    <div className={`p-3 rounded-2xl max-w-[85%] text-xs sm:text-sm ${
-                      msg.sender === 'doctor'
-                        ? 'bg-blue-600 text-white rounded-tr-none shadow-sm'
-                        : 'bg-slate-800 border border-slate-700 text-slate-200 rounded-tl-none shadow-sm'
-                    }`}>
-                      {msg.text}
-
-                      {/* RAG Source Grounding Pill for Patient Responses */}
-                      {msg.sender === 'patient' && msg.sourceRef && (
-                        <div className="mt-2 pt-1.5 border-t border-slate-700/60 flex items-center justify-between gap-2">
-                          <button
-                            onClick={() => setSelectedSourceDetail(msg.sourceRef)}
-                            className="text-[10px] text-emerald-400 hover:text-emerald-300 flex items-center gap-1 font-mono font-semibold bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-500/30 transition truncate"
-                          >
-                            <BookOpen className="w-3 h-3 shrink-0" /> Grounded: {msg.sourceRef.section}
-                          </button>
-                          {msg.sourceRef.sourceUrl && (
-                            <a
-                              href={msg.sourceRef.sourceUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-[10px] text-blue-400 hover:text-blue-300 underline flex items-center gap-0.5 shrink-0"
-                              title="Open on NCBI"
-                            >
-                              <span>NCBI</span>
-                              <ExternalLink className="w-2.5 h-2.5" />
-                            </a>
-                          )}
+              <div className={`overflow-y-auto space-y-3 pr-2 mb-3 ${simulationState === 'active' ? 'flex-1' : 'max-h-72 border-b border-slate-800 pb-3'}`}>
+                {dialogue.map((msg, i) => {
+                  if (msg.sender === 'preceptor') {
+                    return (
+                      <div key={i} className="my-2 p-3.5 bg-gradient-to-r from-blue-950/90 via-indigo-950/90 to-slate-900 border border-blue-500/50 rounded-2xl shadow-lg">
+                        <div className="flex items-center justify-between font-bold text-blue-300 mb-1 text-xs">
+                          <div className="flex items-center gap-1.5">
+                            <GraduationCap className="w-4 h-4 text-blue-400" />
+                            <span>Attending Physician Clinical Debrief</span>
+                          </div>
+                          <span className="text-[10px] bg-blue-900/60 px-2 py-0.5 rounded font-mono text-blue-200">{msg.time}</span>
                         </div>
-                      )}
+                        <p className="text-xs text-blue-100 leading-relaxed font-sans">{msg.text}</p>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div 
+                      key={i} 
+                      className={`flex flex-col ${msg.sender === 'doctor' ? 'items-end' : 'items-start'}`}
+                    >
+                      <span className="text-[10px] text-slate-500 mb-0.5">
+                        {msg.sender === 'doctor' ? '👨‍⚕️ You (Doctor)' : `🤒 Patient: ${currentCase.patientName}`} • {msg.time}
+                      </span>
+                      <div className={`p-3 rounded-2xl max-w-[85%] text-xs sm:text-sm ${
+                        msg.sender === 'doctor'
+                          ? 'bg-blue-600 text-white rounded-tr-none shadow-sm'
+                          : 'bg-slate-800 border border-slate-700 text-slate-200 rounded-tl-none shadow-sm'
+                      }`}>
+                        {msg.text}
+
+                        {/* RAG Source Grounding Pill for Patient Responses */}
+                        {msg.sender === 'patient' && msg.sourceRef && (
+                          <div className="mt-2 pt-1.5 border-t border-slate-700/60 flex items-center justify-between gap-2">
+                            <button
+                              onClick={() => setSelectedSourceDetail(msg.sourceRef)}
+                              className="text-[10px] text-emerald-400 hover:text-emerald-300 flex items-center gap-1 font-mono font-semibold bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-500/30 transition truncate"
+                            >
+                              <BookOpen className="w-3 h-3 shrink-0" /> Grounded: {msg.sourceRef.section}
+                            </button>
+                            {msg.sourceRef.sourceUrl && (
+                              <a
+                                href={msg.sourceRef.sourceUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-[10px] text-blue-400 hover:text-blue-300 underline flex items-center gap-0.5 shrink-0"
+                                title="Open on NCBI"
+                              >
+                                <span>NCBI</span>
+                                <ExternalLink className="w-2.5 h-2.5" />
+                              </a>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Concluded Simulation: Full OSCE Clinical Teaching & Solution Debrief */}
+              {diagnosisOutcome && (
+                <div className="my-3 p-4 sm:p-5 rounded-2xl border shadow-2xl space-y-3.5 animate-in fade-in duration-300 bg-slate-950/95 border-blue-500/40">
+                  
+                  {/* Verdict Header Banner */}
+                  <div className={`p-3.5 sm:p-4 rounded-xl border flex flex-wrap items-center justify-between gap-3 ${
+                    diagnosisOutcome.type === 'surrender'
+                      ? 'bg-blue-950/60 border-blue-500/50 text-blue-200'
+                      : diagnosisOutcome.isCorrect
+                      ? 'bg-emerald-950/60 border-emerald-500/50 text-emerald-200'
+                      : 'bg-amber-950/60 border-amber-500/50 text-amber-200'
+                  }`}>
+                    <div className="flex items-center gap-3">
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
+                        diagnosisOutcome.type === 'surrender'
+                          ? 'bg-blue-600/30 text-blue-400 border border-blue-500/40'
+                          : diagnosisOutcome.isCorrect
+                          ? 'bg-emerald-600/30 text-emerald-400 border border-emerald-500/40'
+                          : 'bg-amber-600/30 text-amber-400 border border-amber-500/40'
+                      }`}>
+                        {diagnosisOutcome.type === 'surrender' ? (
+                          <BookOpen className="w-5 h-5" />
+                        ) : diagnosisOutcome.isCorrect ? (
+                          <CheckCircle2 className="w-5 h-5" />
+                        ) : (
+                          <AlertTriangle className="w-5 h-5" />
+                        )}
+                      </div>
+                      <div>
+                        <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded bg-black/40 inline-block mb-1">
+                          {diagnosisOutcome.type === 'surrender' 
+                            ? '📖 Guided Clinical Learning Mode • Physician Surrender' 
+                            : diagnosisOutcome.isCorrect 
+                            ? '🎯 Diagnosis Confirmed: Accurate in Consultation' 
+                            : '⚠️ Diagnostic Discrepancy Disclosed in Dialogue'}
+                        </span>
+                        <h3 className="text-sm sm:text-base font-black text-white">
+                          {diagnosisOutcome.type === 'surrender'
+                            ? `Case Solution: ${diagnosisOutcome.trueDiagnosis}`
+                            : diagnosisOutcome.isCorrect
+                            ? `Accurate Diagnosis: ${diagnosisOutcome.trueDiagnosis}`
+                            : `Disclosed: "${diagnosisOutcome.statedDiagnosis}" • True Case: "${diagnosisOutcome.trueDiagnosis}"`}
+                        </h3>
+                      </div>
+                    </div>
+
+                    <div className="text-right">
+                      <span className="text-[10px] text-slate-400 font-mono block">OSCE SCORE</span>
+                      <span className="text-base sm:text-lg font-black text-white bg-slate-900/90 border border-slate-700 px-2.5 py-1 rounded-lg">
+                        {diagnosisOutcome.totalScore}/100
+                      </span>
                     </div>
                   </div>
-                ))}
-              </div>
 
-              {/* Dynamic Quick Clinical Prompts */}
-              <div className="py-2 border-t border-slate-800 flex items-center gap-1.5 overflow-x-auto text-[11px] scrollbar-thin">
-                <span className="text-slate-500 whitespace-nowrap text-xs font-semibold">Quick Ask:</span>
-                {getQuickQuestions().map((q, idx) => (
-                  <button 
-                    key={idx}
-                    onClick={() => handleSendMessage(q.text)}
-                    className="bg-slate-800 hover:bg-slate-700 text-slate-300 px-2.5 py-1 rounded-lg whitespace-nowrap border border-slate-700/60 transition"
+                  {/* Quick Clinical Metrics */}
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
+                    <div className="p-2.5 bg-slate-900 rounded-xl border border-slate-800">
+                      <span className="text-slate-400 block text-[10px]">HISTORY ACCURACY</span>
+                      <span className="font-bold text-white text-sm">{diagnosisOutcome.historyScore}%</span>
+                      <span className="text-[10px] text-slate-500 block">({askedKeywords.size}/{currentCase.goldenQuestions.length} key questions asked)</span>
+                    </div>
+                    <div className="p-2.5 bg-slate-900 rounded-xl border border-slate-800">
+                      <span className="text-slate-400 block text-[10px]">PHYSICAL EXAM</span>
+                      <span className="font-bold text-white text-sm">{examLog.length} Maneuvers</span>
+                      <span className="text-[10px] text-slate-500 block">Torch / Palpation / Camera</span>
+                    </div>
+                    <div className="p-2.5 bg-slate-900 rounded-xl border border-slate-800 col-span-2 sm:col-span-1">
+                      <span className="text-slate-400 block text-[10px]">CLINICAL CASE</span>
+                      <span className="font-bold text-emerald-400 truncate block text-xs">{currentCase.title}</span>
+                      <span className="text-[10px] text-slate-500 block">{currentCase.category} Bay #3</span>
+                    </div>
+                  </div>
+
+                  {/* Section 1: Disease Pathophysiology & Biological Mechanism */}
+                  <div className="p-3 bg-slate-900/90 border border-blue-500/30 rounded-xl space-y-1 text-xs">
+                    <div className="flex items-center gap-1.5 text-blue-400 font-bold">
+                      <Activity className="w-4 h-4" />
+                      <span>Disease Pathophysiology & Mechanism:</span>
+                    </div>
+                    <p className="text-slate-200 leading-relaxed text-[11px] sm:text-xs">
+                      {diagnosisOutcome.pathophysiology}
+                    </p>
+                  </div>
+
+                  {/* Section 2: Key Diagnostic Clues */}
+                  {diagnosisOutcome.keyClues && diagnosisOutcome.keyClues.length > 0 && (
+                    <div className="p-3 bg-slate-900/90 border border-emerald-500/30 rounded-xl space-y-1.5 text-xs">
+                      <div className="flex items-center gap-1.5 text-emerald-400 font-bold">
+                        <CheckCircle2 className="w-4 h-4" />
+                        <span>Key Diagnostic Clues in This Patient Case:</span>
+                      </div>
+                      <ul className="space-y-1 text-[11px] text-slate-300">
+                        {diagnosisOutcome.keyClues.map((clue, idx) => (
+                          <li key={idx} className="flex items-start gap-2">
+                            <span className="text-emerald-400 font-bold">•</span>
+                            <span>{clue}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {/* Section 3: Immediate Emergency Orders */}
+                  {diagnosisOutcome.emergencyProtocol && diagnosisOutcome.emergencyProtocol.length > 0 && (
+                    <div className="p-3 bg-slate-900/90 border border-purple-500/30 rounded-xl space-y-1.5 text-xs">
+                      <div className="flex items-center gap-1.5 text-purple-400 font-bold">
+                        <Zap className="w-4 h-4" />
+                        <span>Immediate Emergency Orders & Management Protocol:</span>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-[11px]">
+                        {diagnosisOutcome.emergencyProtocol.map((order, idx) => (
+                          <div key={idx} className="p-2 bg-slate-950 rounded-lg border border-slate-800 text-slate-300 flex items-center gap-2">
+                            <span className="w-1.5 h-1.5 rounded-full bg-purple-400 shrink-0"></span>
+                            <span>{order}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Section 4: High-Yield Clinical Teaching Pearls */}
+                  {diagnosisOutcome.highYieldPearls && (
+                    <div className="p-3 bg-amber-950/30 border border-amber-500/40 rounded-xl space-y-1 text-xs">
+                      <div className="flex items-center gap-1.5 text-amber-400 font-bold">
+                        <Sparkles className="w-4 h-4" />
+                        <span>High-Yield Clinical Teaching Pearl (Board & OSCE Takeaway):</span>
+                      </div>
+                      <p className="text-amber-200/90 leading-relaxed text-[11px] sm:text-xs italic">
+                        "{diagnosisOutcome.highYieldPearls}"
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Section 5: Direct Clickable NCBI / PubMed Paper Link */}
+                  {diagnosisOutcome.paperUrl && (
+                    <a
+                      href={diagnosisOutcome.paperUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-full flex items-center justify-between p-3 sm:p-3.5 rounded-xl bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 hover:from-blue-500 hover:to-indigo-600 text-white font-bold transition shadow-xl group border border-blue-400/40"
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <div className="p-1.5 bg-white/10 rounded-lg">
+                          <ExternalLink className="w-4 h-4 text-blue-100 group-hover:scale-110 transition-transform" />
+                        </div>
+                        <div className="text-left">
+                          <span className="text-[10px] text-blue-200 block font-normal">Official Clinical Evidence Source (Zero Hallucination):</span>
+                          <span className="text-xs sm:text-sm font-bold text-white block">{diagnosisOutcome.paperTitle}</span>
+                          <span className="text-[10px] text-blue-200 font-mono">{diagnosisOutcome.paperSource}</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1 bg-blue-950/80 border border-blue-400/40 px-2.5 py-1 rounded-lg text-xs font-mono shrink-0">
+                        <span>Read Paper</span>
+                        <span>↗</span>
+                      </div>
+                    </a>
+                  )}
+
+                </div>
+              )}
+
+              {/* Dynamic Quick Clinical Prompts (Only active when simulation is running) */}
+              {simulationState === 'active' && (
+                <div className="py-2 border-t border-slate-800 flex items-center gap-1.5 overflow-x-auto text-[11px] scrollbar-thin">
+                  <span className="text-slate-500 whitespace-nowrap text-xs font-semibold">Quick Ask:</span>
+                  {getQuickQuestions().map((q, idx) => (
+                    <button 
+                      key={idx}
+                      onClick={() => handleSendMessage(q.text)}
+                      className="bg-slate-800 hover:bg-slate-700 text-slate-300 px-2.5 py-1 rounded-lg whitespace-nowrap border border-slate-700/60 transition"
+                    >
+                      {q.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* Voice & Input Controls OR Concluded Action Toolbar */}
+              {simulationState === 'active' ? (
+                <div className="flex items-center gap-2 pt-2 border-t border-slate-800">
+                  <button
+                    onClick={toggleSpeechRecognition}
+                    className={`p-3 rounded-xl flex items-center justify-center transition ${
+                      isListening 
+                        ? 'bg-red-600 text-white animate-pulse' 
+                        : 'bg-blue-600/20 text-blue-400 hover:bg-blue-600/30 border border-blue-500/40'
+                    }`}
+                    title={isListening ? "Listening..." : "Tap to Speak (Mic API)"}
                   >
-                    {q.label}
+                    {isListening ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
                   </button>
-                ))}
-              </div>
 
-              {/* Voice & Input Controls */}
-              <div className="flex items-center gap-2 pt-2 border-t border-slate-800">
-                <button
-                  onClick={toggleSpeechRecognition}
-                  className={`p-3 rounded-xl flex items-center justify-center transition ${
-                    isListening 
-                      ? 'bg-red-600 text-white animate-pulse' 
-                      : 'bg-blue-600/20 text-blue-400 hover:bg-blue-600/30 border border-blue-500/40'
-                  }`}
-                  title={isListening ? "Listening..." : "Tap to Speak (Mic API)"}
-                >
-                  {isListening ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
-                </button>
+                  <input
+                    type="text"
+                    value={inputText}
+                    onChange={(e) => setInputText(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
+                    placeholder={isListening ? "Listening to your voice..." : "Ask clinical question or disclose diagnosis ('you are having a heart attack')..."}
+                    className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-xs sm:text-sm text-white focus:outline-none focus:border-blue-500"
+                  />
 
-                <input
-                  type="text"
-                  value={inputText}
-                  onChange={(e) => setInputText(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
-                  placeholder={isListening ? "Listening to your voice..." : "Ask clinical question (e.g. pain radiation, duration, fever, name)..."}
-                  className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-xs sm:text-sm text-white focus:outline-none focus:border-blue-500"
-                />
-
-                <button
-                  onClick={() => handleSendMessage()}
-                  className="p-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl shadow transition"
-                >
-                  <Send className="w-4 h-4" />
-                </button>
-              </div>
+                  <button
+                    onClick={() => handleSendMessage()}
+                    className="p-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl shadow transition"
+                  >
+                    <Send className="w-4 h-4" />
+                  </button>
+                </div>
+              ) : (
+                <div className="flex flex-wrap items-center justify-between gap-2 p-3 bg-slate-950 border border-slate-800 rounded-xl mt-2">
+                  <div className="flex items-center gap-2 text-xs text-slate-300">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                    <span>Simulation completed • Review clinical teaching debrief above</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={handleRestartCase}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition shadow"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5 text-slate-400" />
+                      <span>Practice Again</span>
+                    </button>
+                    <button
+                      onClick={handleNextCase}
+                      className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white transition shadow"
+                    >
+                      <span>Next Patient Case</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={() => setActiveTab('diagnose')}
+                      className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/40 text-purple-300 transition"
+                    >
+                      <Award className="w-3.5 h-3.5" />
+                      <span>Orders Tab</span>
+                    </button>
+                  </div>
+                </div>
+              )}
 
             </div>
           )}
@@ -1491,6 +1936,50 @@ STRICT RULES:
                       </div>
                     )}
 
+                    {/* Section: Pathophysiology */}
+                    {evaluationResult.pathophysiology && (
+                      <div className="p-3 bg-slate-900/90 border border-blue-500/30 rounded-xl space-y-1">
+                        <div className="flex items-center gap-1.5 text-blue-400 font-bold">
+                          <Activity className="w-4 h-4" />
+                          <span>Disease Pathophysiology & Mechanism:</span>
+                        </div>
+                        <p className="text-slate-200 leading-relaxed text-[11px] sm:text-xs">
+                          {evaluationResult.pathophysiology}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Section: Key Clues */}
+                    {evaluationResult.keyClues && evaluationResult.keyClues.length > 0 && (
+                      <div className="p-3 bg-slate-900/90 border border-emerald-500/30 rounded-xl space-y-1">
+                        <div className="flex items-center gap-1.5 text-emerald-400 font-bold">
+                          <CheckCircle2 className="w-4 h-4" />
+                          <span>Diagnostic Clues Mapped in Case:</span>
+                        </div>
+                        <ul className="space-y-1 text-[11px] text-slate-300">
+                          {evaluationResult.keyClues.map((clue, idx) => (
+                            <li key={idx} className="flex items-start gap-1.5">
+                              <span className="text-emerald-400 font-bold">•</span>
+                              <span>{clue}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {/* Section: High-Yield Teaching Pearls */}
+                    {evaluationResult.highYieldPearls && (
+                      <div className="p-3 bg-amber-950/30 border border-amber-500/40 rounded-xl space-y-1">
+                        <div className="flex items-center gap-1.5 text-amber-400 font-bold">
+                          <Sparkles className="w-4 h-4" />
+                          <span>High-Yield Clinical Pearl:</span>
+                        </div>
+                        <p className="text-amber-200/90 leading-relaxed text-[11px] sm:text-xs italic">
+                          "{evaluationResult.highYieldPearls}"
+                        </p>
+                      </div>
+                    )}
+
                     {evaluationResult.missedGolden.length > 0 && (
                       <div className="mt-2 pt-2 border-t border-slate-800">
                         <span className="text-amber-400 font-semibold block mb-1">Key Questions Missed during History Taking:</span>
@@ -1501,6 +1990,24 @@ STRICT RULES:
                         </ul>
                       </div>
                     )}
+
+                    {/* Action Buttons */}
+                    <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-slate-800">
+                      <button
+                        onClick={handleRestartCase}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition"
+                      >
+                        <RotateCcw className="w-3.5 h-3.5 text-slate-400" />
+                        <span>Practice Again</span>
+                      </button>
+                      <button
+                        onClick={handleNextCase}
+                        className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white transition shadow"
+                      >
+                        <span>Next Patient Case</span>
+                        <ArrowRight className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </div>
                 </div>
               )}
@@ -1519,8 +2026,20 @@ STRICT RULES:
                 <span className="text-xs font-bold text-purple-400 flex items-center gap-1.5">
                   <Laptop className="w-4 h-4" /> iQOO Office Kit Live Supervisor
                 </span>
-                <span className="bg-purple-500/20 text-purple-300 text-[10px] px-2 py-0.5 rounded font-mono">
-                  LIVE STREAM ACTIVE
+                <span className={`text-[10px] px-2 py-0.5 rounded font-mono font-bold ${
+                  simulationState === 'active' 
+                    ? 'bg-purple-500/20 text-purple-300' 
+                    : diagnosisOutcome?.isCorrect 
+                    ? 'bg-emerald-500/20 text-emerald-300' 
+                    : 'bg-amber-500/20 text-amber-300'
+                }`}>
+                  {simulationState === 'active' 
+                    ? 'LIVE CONSULT STREAM' 
+                    : simulationState === 'concluded_surrender'
+                    ? 'CASE SOLVED (PRECEPTOR)'
+                    : diagnosisOutcome?.isCorrect
+                    ? 'DIAGNOSIS ACCURATE'
+                    : 'DIAGNOSTIC DISCREPANCY'}
                 </span>
               </div>
 
@@ -1530,6 +2049,20 @@ STRICT RULES:
                   <p className="font-bold text-white text-sm">{currentCase.patientName} (MRN: #IQOO-2026-{currentCase.id})</p>
                   <p className="text-slate-400 text-[11px]">{currentCase.age} Y / {currentCase.gender} • {currentCase.category} Bay 3</p>
                 </div>
+
+                {/* Outcome card in Office Kit when concluded */}
+                {diagnosisOutcome && (
+                  <div className={`p-3 rounded-lg border text-[11px] ${
+                    diagnosisOutcome.isCorrect ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-200' : 'bg-amber-950/40 border-amber-500/40 text-amber-200'
+                  }`}>
+                    <div className="flex items-center justify-between font-bold mb-1">
+                      <span>Clinical Outcome:</span>
+                      <span className="font-mono">{diagnosisOutcome.totalScore}/100</span>
+                    </div>
+                    <p className="text-white font-semibold">{diagnosisOutcome.trueDiagnosis}</p>
+                    <span className="text-[10px] opacity-80 block mt-0.5">Disclosed: {diagnosisOutcome.statedDiagnosis}</span>
+                  </div>
+                )}
 
                 {/* Direct Citation in Office Kit */}
                 <div className="p-2.5 bg-slate-950 rounded-lg border border-slate-800">
