@@ -12,8 +12,28 @@ Over **48% of diagnostic errors** made by interns and junior doctors stem from i
 **ClinOSCE iQ** turns an iQOO flagship smartphone into a handheld clinical training station:
 1. **🎙️ Voice-First History Taking:** Medical students question an AI-simulated patient using the phone's microphone. The patient responds audibly through the speaker in real-time.
 2. **📸 Physical Examination Module:** Trainees use the camera and torch to inspect visual signs (e.g. testing pupillary light reflex or dermatological rashes) and elicit palpation tenderness with haptic feedback.
-3. **🧠 Zero-Hallucination Edge FSM:** A deterministic 3-case state machine (Acute Appendicitis, STEMI, Asthma) guarantees 100% offline, clinically accurate responses on the Snapdragon NPU.
-4. **💻 iQOO Office Kit Dual-Screen Bridge:** Live-streams the consultation transcript, patient vitals, and instant clinical reasoning scorecard onto a supervising professor's laptop screen.
+3. **🧠 Zero-Hallucination Case-RAG:** 10 verified clinical cases (5 Cardiology + 5 ENT) grounded directly in peer-reviewed **NCBI StatPearls & NIH PubMed** clinical guidelines.
+4. **⚡ NVIDIA Nemotron Ultra 550B:** High-parameter live clinical roleplay via an authenticated serverless proxy (`/api/chat`), with instant offline on-device fallback.
+5. **🎯 In-Chat Diagnosis & Surrender Auto-Termination:** Declaring a diagnosis (e.g., *"you are having a heart attack"*) or saying *"I don't know / give up"* stops the simulation, provides realistic emotional closure, and immediately unlocks the **OSCE Clinical Teaching Debrief** with pathophysiology, emergency protocols, and clickable NCBI paper links.
+6. **💻 iQOO Office Kit Dual-Screen Bridge:** Live-streams the consultation transcript, patient vitals, and instant clinical reasoning scorecard onto a supervising professor's laptop screen.
+
+---
+
+## 🗂️ 10 Verified Clinical Cases (Zero Hallucination)
+
+### ❤️ Cardiology Bay (5 Cases)
+1. **Acute ST-Elevation Myocardial Infarction (STEMI)** — Ramesh Varma (56y/M) | [NCBI NBK532281](https://www.ncbi.nlm.nih.gov/books/NBK532281/)
+2. **Acute Decompensated Heart Failure (ADHF)** — Savitri Devi (68y/F) | [NCBI NBK448195](https://www.ncbi.nlm.nih.gov/books/NBK448195/)
+3. **Acute Pericarditis** — Arjun Mehta (29y/M) | [NCBI NBK431080](https://www.ncbi.nlm.nih.gov/books/NBK431080/)
+4. **Paroxysmal Supraventricular Tachycardia (PSVT)** — Ananya Sen (24y/F) | [NCBI NBK482348](https://www.ncbi.nlm.nih.gov/books/NBK482348/)
+5. **Acute Infective Endocarditis** — Vikram Roy (44y/M) | [NCBI NBK537130](https://www.ncbi.nlm.nih.gov/books/NBK537130/)
+
+### 👂 ENT Bay (5 Cases)
+6. **Acute Peritonsillar Abscess (Quinsy)** — Karan Malhotra (21y/M) | [NCBI NBK519520](https://www.ncbi.nlm.nih.gov/books/NBK519520/)
+7. **Benign Paroxysmal Positional Vertigo (BPPV)** — Meenakshi Sundaram (58y/F) | [NCBI NBK470308](https://www.ncbi.nlm.nih.gov/books/NBK470308/)
+8. **Acute Mastoiditis** — Rohan Das (19y/M) | [NCBI NBK544332](https://www.ncbi.nlm.nih.gov/books/NBK544332/)
+9. **Acute Adult Epiglottitis (Airway Emergency)** — Suresh Pillai (48y/M) | [NCBI NBK430960](https://www.ncbi.nlm.nih.gov/books/NBK430960/)
+10. **Sudden Sensorineural Hearing Loss (SSNHL)** — Deepa Joshi (36y/F) | [NCBI NBK448109](https://www.ncbi.nlm.nih.gov/books/NBK448109/)
 
 ---
 
