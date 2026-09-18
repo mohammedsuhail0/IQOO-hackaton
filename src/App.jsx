@@ -60,19 +60,22 @@ export default function App() {
   const [selectedSourceDetail, setSelectedSourceDetail] = useState(null);
   const [showSourcesDirectory, setShowSourcesDirectory] = useState(false);
 
+  const DEFAULT_KEY = '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';
+  const DEFAULT_MODEL = 'nvidia/nemotron-3-ultra-550b-a55b';
+
   // API Settings & Nemotron State (Persisted in localStorage)
   const [showSettings, setShowSettings] = useState(false);
   const [apiEndpoint, setApiEndpoint] = useState(() => 
     localStorage.getItem('clinosce_api_endpoint') || '/api/chat'
   );
   const [apiKey, setApiKey] = useState(() => 
-    localStorage.getItem('clinosce_api_key') || ''
+    localStorage.getItem('clinosce_api_key') || DEFAULT_KEY
   );
   const [modelName, setModelName] = useState(() => 
-    localStorage.getItem('clinosce_model_name') || 'nvidia/nemotron-4-340b-instruct'
+    localStorage.getItem('clinosce_model_name') || DEFAULT_MODEL
   );
   const [engineMode, setEngineMode] = useState(() => 
-    localStorage.getItem('clinosce_engine_mode') || 'offline'
+    localStorage.getItem('clinosce_engine_mode') || 'nemotron'
   );
   const [testStatus, setTestStatus] = useState(null); // null | 'testing' | 'success' | 'error'
   const [testMessage, setTestMessage] = useState('');
@@ -483,6 +486,8 @@ export default function App() {
     });
 
     // --- STEP 3: Live Nemotron Cloud Generation OR Smart Local Engine ---
+    let isFromNemotron = false;
+
     if (!matchedAnswer) {
       if (engineMode === 'nemotron' && apiKey) {
         try {
@@ -491,7 +496,7 @@ export default function App() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               apiKey: apiKey,
-              model: modelName || 'nvidia/nemotron-4-340b-instruct',
+              model: modelName || DEFAULT_MODEL,
               endpoint: apiEndpoint,
               messages: [
                 {
@@ -500,8 +505,13 @@ export default function App() {
 Condition: ${currentCase.title}.
 Chief Complaint: "${currentCase.chiefComplaint}".
 Current Vitals: BP ${currentCase.vitals.bp}, HR ${currentCase.vitals.heartRate}, RR ${currentCase.vitals.respRate}, Temp ${currentCase.vitals.temp}, SpO2 ${currentCase.vitals.spo2}.
-Grounded Medical Context: ${ragContext ? ragContext.retrievedText : currentCase.title}.
-STRICT RULE: You are the PATIENT, NOT an AI or a doctor. Talk in first-person ("I feel...", "My..."). Answer in 1-2 realistic, authentic sentences. Never state your diagnosis directly.`
+Physical Exam: ${JSON.stringify(currentCase.physicalExam)}.
+Grounded Clinical RAG Context: ${ragContext ? ragContext.retrievedText : currentCase.title}.
+STRICT RULES:
+1. You are the PATIENT, NOT an AI or a doctor. Talk in first-person ("I feel...", "My...").
+2. Answer in 1-2 realistic, authentic sentences.
+3. If asked your name, answer "${currentCase.patientName}".
+4. Never break character. Never state your diagnosis directly.`
                 },
                 ...dialogue.slice(-3).map(d => ({
                   role: d.sender === 'doctor' ? 'user' : 'assistant',
@@ -514,6 +524,7 @@ STRICT RULE: You are the PATIENT, NOT an AI or a doctor. Talk in first-person ("
           const data = await res.json();
           if (res.ok && data.choices?.[0]?.message?.content) {
             matchedAnswer = data.choices[0].message.content.trim();
+            isFromNemotron = true;
           } else {
             console.warn('Nemotron call fallback to local engine:', data.error);
             matchedAnswer = getContextualPatientReply(query, currentCase, dialogue);
@@ -535,16 +546,17 @@ STRICT RULE: You are the PATIENT, NOT an AI or a doctor. Talk in first-person ("
           text: matchedAnswer, 
           time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
           sourceRef: ragContext || {
-            sourceTitle: currentCase.sourceCitation?.title || caseSources.sources[0]?.title || "Clinical Protocol",
+            sourceTitle: isFromNemotron ? "NVIDIA Nemotron Ultra 550B" : (currentCase.sourceCitation?.title || caseSources.sources[0]?.title || "Clinical Protocol"),
             sourceUrl: currentCase.sourceCitation?.sourceUrl || caseSources.sources[0]?.sourceUrl,
-            section: "Patient Symptom Grounding",
-            retrievedText: `Clinical protocol for ${currentCase.title}: patient reports symptoms consistent with confirmed presentation.`,
-            confidence: 0.90
+            section: isFromNemotron ? "Nemotron Ultra Live Response" : "Patient Symptom Grounding",
+            retrievedText: isFromNemotron ? "Live neural inference via NVIDIA Nemotron-3-Ultra-550B-A55B grounded in patient case parameters." : `Clinical protocol for ${currentCase.title}: patient reports symptoms consistent with confirmed presentation.`,
+            confidence: isFromNemotron ? 0.99 : 0.90,
+            isNemotron: isFromNemotron
           }
         }
       ]);
       speakText(matchedAnswer);
-    }, 280);
+    }, 250);
   };
 
   // Diagnostic Evaluation with RAG Citation & Clickable Redirect Link

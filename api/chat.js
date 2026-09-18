@@ -19,16 +19,12 @@ export default async function handler(req, res) {
 
   try {
     const { model, messages, apiKey, endpoint } = req.body || {};
-    const key = apiKey || process.env.NVIDIA_API_KEY || process.env.VITE_NVIDIA_API_KEY;
-
-    if (!key) {
-      return res.status(401).json({ 
-        error: 'No NVIDIA API key provided. Please configure an API key in Settings or environment.' 
-      });
-    }
+    
+    // Use user-provided key, environment key, or the authenticated Nemotron Ultra key
+    const key = apiKey || process.env.NVIDIA_API_KEY || process.env.VITE_NVIDIA_API_KEY || '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';
 
     const targetUrl = endpoint || 'https://integrate.api.nvidia.com/v1/chat/completions';
-    const targetModel = model || 'nvidia/nemotron-4-340b-instruct';
+    const targetModel = model || 'nvidia/nemotron-3-ultra-550b-a55b';
 
     const response = await fetch(targetUrl, {
       method: 'POST',
@@ -39,8 +35,8 @@ export default async function handler(req, res) {
       body: JSON.stringify({
         model: targetModel,
         messages: messages || [],
-        temperature: 0.5,
-        max_tokens: 150
+        temperature: 0.7,
+        max_tokens: 250
       })
     });
 
