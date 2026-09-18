@@ -1,0 +1,206 @@
+[
+  {
+    "id": "case-1",
+    "title": "Acute Abdominal Distress",
+    "patientName": "Rahul Sharma",
+    "age": 28,
+    "gender": "Male",
+    "occupation": "Software Engineer",
+    "chiefComplaint": "Severe pain in the lower right side of my stomach since early morning.",
+    "vitals": {
+      "bp": "128/84 mmHg",
+      "heartRate": "104 bpm",
+      "respRate": "19 /min",
+      "temp": "38.3 °C (101.0 °F)",
+      "spo2": "99%"
+    },
+    "trueDiagnosis": "Acute Appendicitis",
+    "allowedDiagnoses": ["Acute Appendicitis", "Appendicitis", "Perforated Appendix"],
+    "differentials": [
+      "Mesenteric Adenitis",
+      "Renal Colic / Nephrolithiasis",
+      "Acute Gastroenteritis",
+      "Meckel's Diverticulitis"
+    ],
+    "urgentOrders": [
+      "Abdominal Ultrasound / CT Abdomen",
+      "Complete Blood Count (CBC) with differential",
+      "Urgent General Surgical Consultation",
+      "NPO (Nil Per Os) order for surgery prep"
+    ],
+    "goldenQuestions": [
+      {
+        "keywords": ["when", "start", "duration", "hours", "how long"],
+        "answer": "It began around 3 AM as a dull, crampy ache around my navel, but by 7 AM it shifted down to my lower right side and became sharp and constant."
+      },
+      {
+        "keywords": ["nausea", "vomit", "throw up", "puke"],
+        "answer": "Yes, I felt intensely nauseated and threw up twice this morning after the pain moved."
+      },
+      {
+        "keywords": ["fever", "chills", "hot", "temperature"],
+        "answer": "Yes, I've had shivering chills since breakfast and feel hot to the touch."
+      },
+      {
+        "keywords": ["appetite", "eat", "hungry", "food"],
+        "answer": "Zero appetite. The thought of food makes me want to throw up."
+      },
+      {
+        "keywords": ["urinate", "urine", "pee", "burning"],
+        "answer": "No burning or blood when I urinate, just regular urination."
+      },
+      {
+        "keywords": ["bowel", "stool", "diarrhea", "constipated"],
+        "answer": "I haven't passed stool or gas since last evening. Feels constipated."
+      },
+      {
+        "keywords": ["worse", "better", "movement", "cough", "walk"],
+        "answer": "Every bump on the road or cough makes my lower right abdomen throb agonizingly."
+      }
+    ],
+    "physicalExam": {
+      "pupilReflex": {
+        "finding": "Pupils Equal, Round, and Reactive to Light (PERRLA). Mild conjunctival dehydration.",
+        "normal": true
+      },
+      "palpation": {
+        "finding": "Marked tenderness at McBurney's Point. Involuntary muscle guarding. Positive rebound tenderness and positive Rovsing's sign.",
+        "sign": "Positive McBurney's Sign"
+      },
+      "chestAuscultation": "Bilateral air entry normal. Tachycardia without murmurs."
+    },
+    "defaultResponse": "I feel really sick, doctor. The pain is centered in my lower right abdomen and it hurts whenever I move or breathe deeply."
+  },
+  {
+    "id": "case-2",
+    "title": "Acute Crushing Chest Pain",
+    "patientName": "Ramesh Varma",
+    "age": 56,
+    "gender": "Male",
+    "occupation": "Bank Manager",
+    "chiefComplaint": "Crushing chest tightness and heaviness, feels like an elephant sitting on my chest.",
+    "vitals": {
+      "bp": "158/96 mmHg",
+      "heartRate": "108 bpm",
+      "respRate": "24 /min",
+      "temp": "36.8 °C",
+      "spo2": "93% on room air"
+    },
+    "trueDiagnosis": "Acute Myocardial Infarction",
+    "allowedDiagnoses": ["Acute Myocardial Infarction", "Myocardial Infarction", "STEMI", "Heart Attack", "Acute Coronary Syndrome"],
+    "differentials": [
+      "Aortic Dissection",
+      "Pulmonary Embolism",
+      "Gastroesophageal Reflux Disease (GERD)",
+      "Acute Pericarditis"
+    ],
+    "urgentOrders": [
+      "Immediate 12-Lead ECG within 10 minutes",
+      "High-Sensitivity Cardiac Troponin-I/T",
+      "Aspirin 325 mg chewed + Clopidogrel 300 mg",
+      "Activate Cardiac Cath Lab for Emergency PCI"
+    ],
+    "goldenQuestions": [
+      {
+        "keywords": ["where", "radiate", "spread", "arm", "jaw", "neck", "back"],
+        "answer": "The pain is right in the center of my chest and radiates down my left arm and up into my left jaw."
+      },
+      {
+        "keywords": ["sweat", "sweating", "perspiration", "cold"],
+        "answer": "Yes, I am sweating profusely and drenched in cold sweat."
+      },
+      {
+        "keywords": ["breathe", "breath", "shortness", "dyspnea"],
+        "answer": "I can't take a full breath, I feel suffocated and air-hungry."
+      },
+      {
+        "keywords": ["smoking", "smoke", "tobacco", "cigarettes"],
+        "answer": "I have been smoking a pack a day for 25 years."
+      },
+      {
+        "keywords": ["diabetes", "sugar", "hypertension", "bp", "pressure"],
+        "answer": "I have high blood pressure and Type-2 Diabetes for 8 years, but I frequently forget my medications."
+      },
+      {
+        "keywords": ["when", "start", "exercise", "rest", "duration"],
+        "answer": "It started 45 minutes ago while climbing the office stairs and has not relieved with rest."
+      }
+    ],
+    "physicalExam": {
+      "pupilReflex": {
+        "finding": "PERRLA. Pupils dilated secondary to sympathetic drive/stress.",
+        "normal": true
+      },
+      "palpation": {
+        "finding": "Cold, clammy, diaphoretic skin. S4 gallop heard on cardiac auscultation. Bilateral lung bases clear.",
+        "sign": "Diaphoresis & S4 Heart Sound"
+      },
+      "chestAuscultation": "Tachycardia, S4 audible, mild bibasilar inspiratory rales."
+    },
+    "defaultResponse": "Please help, doctor. It's a crushing heaviness in the center of my chest, and I feel lightheaded and drenched in cold sweat."
+  },
+  {
+    "id": "case-3",
+    "title": "Severe Respiratory Distress",
+    "patientName": "Priya Nair",
+    "age": 22,
+    "gender": "Female",
+    "occupation": "College Student",
+    "chiefComplaint": "I can barely breathe... my blue inhaler... isn't working at all...",
+    "vitals": {
+      "bp": "122/80 mmHg",
+      "heartRate": "122 bpm",
+      "respRate": "30 /min",
+      "temp": "37.0 °C",
+      "spo2": "90% on room air"
+    },
+    "trueDiagnosis": "Acute Severe Asthma Exacerbation",
+    "allowedDiagnoses": ["Acute Severe Asthma", "Asthma Exacerbation", "Acute Asthma", "Status Asthmaticus"],
+    "differentials": [
+      "Pneumothorax",
+      "Anaphylaxis",
+      "Acute Bronchitis",
+      "Foreign Body Aspiration"
+    ],
+    "urgentOrders": [
+      "Continuous High-Flow Nebulized Salbutamol + Ipratropium",
+      "Supplemental High-Flow Oxygen to maintain SpO2 94-98%",
+      "Systemic IV Corticosteroids (Hydrocortisone 100mg)",
+      "Urgent Arterial Blood Gas (ABG) & Peak Expiratory Flow"
+    ],
+    "goldenQuestions": [
+      {
+        "keywords": ["inhaler", "puffs", "medicine", "salbutamol", "dose"],
+        "answer": "(Gasping) Took 6 puffs... of my rescue inhaler... in the last hour... zero relief..."
+      },
+      {
+        "keywords": ["trigger", "dust", "smoke", "pollen", "cat", "dog", "cold"],
+        "answer": "Was cleaning... an old dusty storage closet... in my dorm this morning..."
+      },
+      {
+        "keywords": ["talk", "speak", "sentence"],
+        "answer": "(Struggles to speak more than 2-3 words per breath)."
+      },
+      {
+        "keywords": ["hospital", "icu", "intubated", "past", "history"],
+        "answer": "Admitted to ICU... two years ago... for a severe attack..."
+      },
+      {
+        "keywords": ["cough", "phlegm", "mucus", "sputum"],
+        "answer": "Dry... tight hacking cough... no phlegm..."
+      }
+    ],
+    "physicalExam": {
+      "pupilReflex": {
+        "finding": "PERRLA. Wide eyes, visible accessory muscle use (sternocleidomastoid retractions).",
+        "normal": true
+      },
+      "palpation": {
+        "finding": "Intercostal retractions, suprasternal indrawing, marked respiratory fatigue.",
+        "sign": "Accessory Muscle Retractions"
+      },
+      "chestAuscultation": "Widespread high-pitched expiratory wheezing bilaterally, prolonged expiratory phase."
+    },
+    "defaultResponse": "I... can't breathe... chest feels... locked shut..."
+  }
+]
