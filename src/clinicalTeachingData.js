@@ -312,12 +312,18 @@ export function detectSurrenderPhrase(rawText) {
 export function detectInChatDiagnosis(rawText, currentCase) {
   if (!rawText) return null;
 
-  // Normalize: handle common shorthand e.g. "u r", "ur", "u have", typos like "heatattack"
+  // Normalize: handle common shorthand e.g. "u r", "ur", "u have", typos like "haing", "heatattack"
   let clean = rawText.toLowerCase()
     .replace(/\bu r\b/g, "you are")
     .replace(/\bur\b/g, "your")
     .replace(/\bu have\b/g, "you have")
+    .replace(/\bu are\b/g, "you are")
+    .replace(/\bhaing\b/g, "having")
+    .replace(/\bhavng\b/g, "having")
+    .replace(/\bhavin\b/g, "having")
+    .replace(/\bhve\b/g, "have")
     .replace(/heatattack/g, "heart attack")
+    .replace(/heartattack/g, "heart attack")
     .replace(/[.,/#!$%^&*;:{}=\-_`~()?]/g, " ")
     .replace(/\s+/g, " ")
     .trim();
@@ -328,6 +334,7 @@ export function detectInChatDiagnosis(rawText, currentCase) {
     "you are getting a",
     "you are having an",
     "you are having a",
+    "you are having",
     "you have an",
     "you have a",
     "you have",
@@ -340,6 +347,8 @@ export function detectInChatDiagnosis(rawText, currentCase) {
     "it's an",
     "it's a",
     "i think you have",
+    "i think it is",
+    "i think it's",
     "i suspect you have",
     "looks like you have",
     "seems like you have"
@@ -347,13 +356,19 @@ export function detectInChatDiagnosis(rawText, currentCase) {
 
   const hasDisclosurePrefix = disclosurePrefixes.some(prefix => clean.includes(prefix));
 
+  // Disqualify if it's an inquiry about past medical history or general question unless prefixed with diagnosis intent
+  const isPastHistoryOrGeneralQuestion = /\b(history of|in the past|before|prior to this|have you ever|did you ever|family history|anyone in your family|any history)\b/i.test(rawText);
+  if (isPastHistoryOrGeneralQuestion && !hasDisclosurePrefix) {
+    return null;
+  }
+
   // Check against all conditions in the catalog
   for (const item of MEDICAL_CONDITIONS_CATALOG) {
     for (const kw of item.keywords) {
       const kwRegex = new RegExp(`\\b${kw}\\b`, 'i');
       if (kwRegex.test(clean)) {
         // If it has a disclosure prefix, or if the whole message is predominantly naming the condition
-        const isPredominantMatch = clean.length <= kw.length + 15;
+        const isPredominantMatch = clean.length <= kw.length + 30;
         if (hasDisclosurePrefix || isPredominantMatch) {
           // Check if this condition matches the current case
           const isCaseMatch = item.caseId === currentCase.id || 

@@ -1,11 +1,88 @@
 import React, { useState, useEffect, useRef } from 'react';
 import casesData from './cases.json';
-import { CLINICAL_TEACHING_DATA } from './clinicalTeachingData.js';
+import { CLINICAL_TEACHING_DATA, detectInChatDiagnosis, detectSurrenderPhrase } from './clinicalTeachingData.js';
 import { CLINICAL_KNOWLEDGE_BASE } from './ragKnowledgeBase.js';
 import { 
   Send, RotateCcw, ChevronDown, HeartPulse, 
-  Wifi, Battery, Signal, Sparkles, CheckCheck, ExternalLink
+  Wifi, Battery, Signal, Sparkles, CheckCheck, ExternalLink,
+  Lightbulb, CheckCircle2, AlertCircle, ArrowRight, X, BookOpen
 } from 'lucide-react';
+
+// Clinical Interview Questions Guide for Non-Doctors
+const getClinicalQuestionsGuide = (c) => {
+  if (c.category === 'Cardiology') {
+    return [
+      {
+        category: "📍 Pain & Sensation",
+        questions: [
+          { text: "Where exactly is the pain and does it spread into your left arm or jaw?", why: "Checks for classic radiation to arm/jaw." },
+          { text: "Is the pain a crushing heaviness, or sharp like a knife?", why: "Differentiates heart attack pressure from pleuritic pain." },
+          { text: "On a scale of 1 to 10, how severe is the pain right now?", why: "Assesses pain intensity." }
+        ]
+      },
+      {
+        category: "⏱️ Onset & Triggers",
+        questions: [
+          { text: "When exactly did this start, and what were you doing?", why: "Checks for exertional onset while active." },
+          { text: "Does resting or lying flat make it any better or worse?", why: "Checks for relief with rest or lying flat." }
+        ]
+      },
+      {
+        category: "🫁 Red Flag Warning Signs",
+        questions: [
+          { text: "Did you break out into a cold, clammy sweat?", why: "Autonomic sympathetic surge." },
+          { text: "Are you feeling breathless, suffocated, or sick to your stomach?", why: "Assesses oxygen and hemodynamic compromise." }
+        ]
+      },
+      {
+        category: "🚬 Risk Factors & Pills",
+        questions: [
+          { text: "Do you have high blood pressure, diabetes, or smoke?", why: "Evaluates cardiovascular risk profile." },
+          { text: "What medications or pills do you take regularly?", why: "Checks regular prescription treatments." }
+        ]
+      },
+      {
+        category: "🎯 Ready to Diagnose?",
+        questions: [
+          { text: `You are having an ${c.trueDiagnosis}`, why: "Submits your diagnosis to conclude the case." },
+          { text: "I surrender, please tell me the diagnosis", why: "Requests attending handover and unlocks debrief." }
+        ]
+      }
+    ];
+  } else {
+    return [
+      {
+        category: "👂 Symptoms & Localization",
+        questions: [
+          { text: "Where is the main discomfort located, and does it shoot to your ear?", why: "Checks for ear pain or throat infection." },
+          { text: "Can you swallow your saliva or any liquids?", why: "Assesses swallowing or airway difficulty." },
+          { text: "On a scale of 1 to 10, how severe is the discomfort?", why: "Assesses symptom intensity." }
+        ]
+      },
+      {
+        category: "🌀 Movement & Breathing",
+        questions: [
+          { text: "How long has this lasted, and does turning your head trigger it?", why: "Checks for vertigo or positional triggers." },
+          { text: "Does leaning forward help you breathe or keep your airway open?", why: "Checks for airway posture in epiglottitis." }
+        ]
+      },
+      {
+        category: "🫁 Warning Signs & Hearing",
+        questions: [
+          { text: "Are you having any fever, chills, or voice changes?", why: "Checks for severe infection." },
+          { text: "Are you experiencing any sudden hearing loss or buzzing in your ear?", why: "Evaluates inner ear emergencies." }
+        ]
+      },
+      {
+        category: "🎯 Ready to Diagnose?",
+        questions: [
+          { text: `You are suffering from ${c.trueDiagnosis}`, why: "Submits your diagnosis to conclude the case." },
+          { text: "I surrender, please tell me the diagnosis", why: "Requests attending handover and unlocks debrief." }
+        ]
+      }
+    ];
+  }
+};
 
 // Build Authoritative Clinical Paper Grounding for NVIDIA Nemotron 550B
 const buildClinicalSystemPrompt = (c) => {
@@ -49,6 +126,10 @@ STRICT SIMULATION RULES:
 export default function App() {
   const [selectedCaseId, setSelectedCaseId] = useState(casesData[0].id);
   const [showCaseSelector, setShowCaseSelector] = useState(false);
+  const [showHelperDrawer, setShowHelperDrawer] = useState(false);
+  const [simulationState, setSimulationState] = useState('active'); // 'active' | 'concluded'
+  const [evaluationData, setEvaluationData] = useState(null);
+  const [askedKeywords, setAskedKeywords] = useState(new Set());
   const currentCase = casesData.find(c => c.id === selectedCaseId) || casesData[0];
 
   const getCaseCitation = (c) => {
@@ -82,7 +163,7 @@ export default function App() {
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages, isTyping]);
+  }, [messages, isTyping, evaluationData]);
 
   // Reset dialogue when case changes
   useEffect(() => {
@@ -98,6 +179,10 @@ export default function App() {
     setInputText('');
     setIsTyping(false);
     setShowCaseSelector(false);
+    setShowHelperDrawer(false);
+    setSimulationState('active');
+    setEvaluationData(null);
+    setAskedKeywords(new Set());
   }, [selectedCaseId]);
 
   // Restart current case
@@ -113,6 +198,17 @@ export default function App() {
     ]);
     setInputText('');
     setIsTyping(false);
+    setShowHelperDrawer(false);
+    setSimulationState('active');
+    setEvaluationData(null);
+    setAskedKeywords(new Set());
+  };
+
+  // Switch to next case
+  const handleNextCase = () => {
+    const currentIndex = casesData.findIndex(c => c.id === selectedCaseId);
+    const nextIndex = (currentIndex + 1) % casesData.length;
+    setSelectedCaseId(casesData[nextIndex].id);
   };
 
   // Local Patient Response Generator (Instant, Reliable, No Hallucinations)
@@ -236,10 +332,10 @@ export default function App() {
     return fallbacks[Math.floor(Math.random() * fallbacks.length)];
   };
 
-  // Handle sending a message with Live Nemotron 550B + Clinical Paper RAG
+  // Handle sending a message with Live Nemotron 550B + Clinical Termination Detection
   const handleSend = async (textToSend = inputText) => {
     const text = textToSend.trim();
-    if (!text || isTyping) return;
+    if (!text || isTyping || simulationState !== 'active') return;
 
     const userMessage = {
       id: `user-${Date.now()}`,
@@ -251,10 +347,104 @@ export default function App() {
     const nextMessages = [...messages, userMessage];
     setMessages(nextMessages);
     setInputText('');
+    setShowHelperDrawer(false);
+
+    // Track asked golden questions
+    const qLower = text.toLowerCase();
+    const updatedKeywords = new Set(askedKeywords);
+    if (currentCase.goldenQuestions) {
+      currentCase.goldenQuestions.forEach(gq => {
+        if (gq.keywords.some(k => qLower.includes(k.toLowerCase()))) {
+          updatedKeywords.add(gq.id);
+        }
+      });
+      setAskedKeywords(updatedKeywords);
+    }
+
+    // 1. Check for Surrender / Give Up
+    if (detectSurrenderPhrase(text)) {
+      setIsTyping(true);
+      setTimeout(() => {
+        setIsTyping(false);
+        const teaching = CLINICAL_TEACHING_DATA[currentCase.id] || {};
+        const score = Math.min(60, Math.round((updatedKeywords.size / Math.max(1, currentCase.goldenQuestions.length)) * 60));
+
+        const evalPayload = {
+          isSurrender: true,
+          isCorrect: false,
+          diagnosedCondition: "Doctor Surrendered (Handed to Attending)",
+          trueDiagnosis: currentCase.trueDiagnosis,
+          score: score,
+          teaching,
+          paperTitle: teaching.paperTitle || "NCBI StatPearls",
+          paperUrl: teaching.paperUrl || "https://www.ncbi.nlm.nih.gov/",
+          paperSource: teaching.paperSource || "NCBI StatPearls",
+          summary: "You requested senior attending intervention. Review the clinical pearls, emergency orders, and gold-standard pathophysiology below to strengthen your diagnostic approach."
+        };
+
+        const patientPanicMsg = {
+          id: `patient-surrender-${Date.now()}`,
+          sender: 'patient',
+          text: `(Breathing heavily, eyes wide with fear) Doctor, you're not sure?! Please, call the chief specialist right away... whatever is happening in my body, it's getting worse by the minute!`,
+          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          sourceCitation: getCaseCitation(currentCase)
+        };
+
+        setMessages(prev => [...prev, patientPanicMsg]);
+        setEvaluationData(evalPayload);
+        setSimulationState('concluded');
+      }, 700);
+      return;
+    }
+
+    // 2. Check for In-Chat Diagnosis
+    const diagCheck = detectInChatDiagnosis(text, currentCase);
+    if (diagCheck) {
+      setIsTyping(true);
+      setTimeout(() => {
+        setIsTyping(false);
+        const teaching = CLINICAL_TEACHING_DATA[currentCase.id] || {};
+        const historyScore = Math.round((updatedKeywords.size / Math.max(1, currentCase.goldenQuestions.length)) * 50);
+        const diagScore = diagCheck.isCorrect ? 50 : 15;
+        const totalScore = historyScore + diagScore;
+
+        const evalPayload = {
+          isSurrender: false,
+          isCorrect: diagCheck.isCorrect,
+          diagnosedCondition: diagCheck.extractedDiagnosis,
+          trueDiagnosis: currentCase.trueDiagnosis,
+          score: totalScore,
+          teaching,
+          paperTitle: teaching.paperTitle || "NCBI StatPearls",
+          paperUrl: teaching.paperUrl || "https://www.ncbi.nlm.nih.gov/",
+          paperSource: teaching.paperSource || "NCBI StatPearls",
+          summary: diagCheck.isCorrect
+            ? `Spot-on diagnosis! You accurately identified ${currentCase.trueDiagnosis} based on patient symptoms, risk factors, and history.`
+            : `Differential mismatch. You diagnosed "${diagCheck.extractedDiagnosis}", but the underlying confirmed condition is "${currentCase.trueDiagnosis}". Review the pathophysiology differential and emergency protocols below.`
+        };
+
+        const patientReplyText = diagCheck.isCorrect
+          ? `(Gasps, clutching your arm with trembling hands) A ${diagCheck.extractedDiagnosis}?! Oh god doctor, thank goodness you figured it out! Please save me... tell the nurses what to do!`
+          : `(Looks stunned and confused) A ${diagCheck.extractedDiagnosis}?! Doctor, are you sure? The agony in my body doesn't feel like that at all... please take another look!`;
+
+        const patientClosureMsg = {
+          id: `patient-closure-${Date.now()}`,
+          sender: 'patient',
+          text: patientReplyText,
+          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          sourceCitation: getCaseCitation(currentCase)
+        };
+
+        setMessages(prev => [...prev, patientClosureMsg]);
+        setEvaluationData(evalPayload);
+        setSimulationState('concluded');
+      }, 700);
+      return;
+    }
+
+    // 3. Normal Dialogue: Call Live Nemotron 550B with fallback
     setIsTyping(true);
-
     const { systemPrompt, paperTitle, paperUrl, paperSource } = buildClinicalSystemPrompt(currentCase);
-
     let replyText = null;
 
     try {
@@ -351,12 +541,12 @@ export default function App() {
         {/* Android Top App Bar */}
         <div className="bg-[#0f172a] border-b border-slate-800/80 px-3 py-2 flex items-center justify-between gap-2 z-10 shadow-md shrink-0">
           {/* Patient Profile Info */}
-          <div className="flex items-center gap-2.5 min-w-0 flex-1">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
             <div className="relative">
-              <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-blue-600 to-cyan-500 flex items-center justify-center text-white font-semibold text-sm shadow-inner">
+              <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-600 to-cyan-500 flex items-center justify-center text-white font-semibold text-xs shadow-inner">
                 {currentCase.patientName.charAt(0)}
               </div>
-              <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 border-2 border-[#0f172a] rounded-full"></span>
+              <span className="absolute bottom-0 right-0 w-2 h-2 bg-emerald-500 border-2 border-[#0f172a] rounded-full"></span>
             </div>
 
             <div className="min-w-0 flex-1">
@@ -370,33 +560,45 @@ export default function App() {
               </div>
               <p className="text-[10px] text-emerald-400 font-medium flex items-center gap-1 truncate">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                <span>Nemotron 550B • NCBI Paper RAG</span>
+                <span>Nemotron 550B • NCBI RAG</span>
               </p>
             </div>
           </div>
 
-          {/* Action Buttons: Case Dropdown & Reset */}
-          <div className="flex items-center gap-1">
+          {/* Action Buttons: Guide, Case Dropdown, Reset */}
+          <div className="flex items-center gap-1 shrink-0">
+            {/* Guide Button for Non-Doctors */}
+            <button
+              onClick={() => setShowHelperDrawer(true)}
+              title="Doctor Interview Guide (What to Ask)"
+              className="px-2 py-1 rounded-full bg-amber-500/10 hover:bg-amber-500/20 active:bg-amber-500/30 text-amber-400 border border-amber-500/30 text-xs flex items-center gap-1 transition"
+            >
+              <Lightbulb className="w-3 h-3" />
+              <span className="font-medium text-[11px]">Guide</span>
+            </button>
+
+            {/* Cases Selector */}
             <button
               onClick={() => setShowCaseSelector(!showCaseSelector)}
               title="Switch Patient Case"
-              className="px-2.5 py-1 rounded-full hover:bg-slate-800 text-slate-300 transition flex items-center gap-1 text-xs border border-slate-700/60"
+              className="px-2 py-1 rounded-full hover:bg-slate-800 text-slate-300 transition flex items-center gap-1 text-xs border border-slate-700/60"
             >
-              <span>Cases</span>
+              <span className="text-[11px]">Cases</span>
               <ChevronDown className={`w-3 h-3 transition-transform ${showCaseSelector ? 'rotate-180' : ''}`} />
             </button>
 
+            {/* Restart Button */}
             <button
               onClick={handleRestart}
               title="Restart Patient Consultation"
-              className="p-1.5 rounded-full hover:bg-slate-800 text-slate-400 hover:text-slate-200 transition"
+              className="p-1 rounded-full hover:bg-slate-800 text-slate-400 hover:text-slate-200 transition"
             >
               <RotateCcw className="w-3.5 h-3.5" />
             </button>
           </div>
         </div>
 
-        {/* Case Switcher Dropdown Modal / Drawer */}
+        {/* Case Switcher Dropdown Modal */}
         {showCaseSelector && (
           <div className="absolute top-[80px] left-0 right-0 bg-[#0f172a]/95 backdrop-blur-md border-b border-slate-700/80 p-3 z-30 shadow-2xl max-h-[340px] overflow-y-auto">
             <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider px-2 mb-2 flex items-center justify-between">
@@ -431,6 +633,70 @@ export default function App() {
           </div>
         )}
 
+        {/* Doctor Question Assistant Modal/Drawer */}
+        {showHelperDrawer && (
+          <div className="absolute inset-0 bg-[#0c1220]/95 backdrop-blur-md z-40 flex flex-col p-3.5 overflow-hidden animate-in fade-in duration-200">
+            {/* Drawer Header */}
+            <div className="flex items-center justify-between border-b border-slate-800 pb-2.5 mb-2.5 shrink-0">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center border border-amber-500/30">
+                  <Lightbulb className="w-4 h-4" />
+                </div>
+                <div>
+                  <h2 className="text-xs font-bold text-slate-100">Doctor Interview Guide</h2>
+                  <p className="text-[10.5px] text-slate-400">High-yield clinical questions for non-doctors</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowHelperDrawer(false)}
+                className="w-7 h-7 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Scrollable Questions Categorized */}
+            <div className="flex-1 min-h-0 overflow-y-auto space-y-3.5 pr-1 scrollbar-thin">
+              {getClinicalQuestionsGuide(currentCase).map((group, gIdx) => (
+                <div key={gIdx} className="space-y-1.5">
+                  <h3 className="text-[11px] font-semibold text-blue-400 uppercase tracking-wide px-1">
+                    {group.category}
+                  </h3>
+                  <div className="space-y-1.5">
+                    {group.questions.map((q, qIdx) => (
+                      <button
+                        key={qIdx}
+                        onClick={() => handleSend(q.text)}
+                        disabled={simulationState !== 'active'}
+                        className="w-full text-left p-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700/90 active:bg-blue-600 border border-slate-700/60 hover:border-slate-600 transition group flex flex-col gap-1 disabled:opacity-50"
+                      >
+                        <div className="text-xs font-medium text-slate-200 group-hover:text-white flex items-start justify-between gap-2">
+                          <span className="leading-snug">"{q.text}"</span>
+                          <ArrowRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-white shrink-0 mt-0.5" />
+                        </div>
+                        <div className="text-[10px] text-cyan-400/90 font-normal flex items-center gap-1">
+                          <BookOpen className="w-2.5 h-2.5 shrink-0" />
+                          <span>{q.why}</span>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Close Button at bottom */}
+            <div className="pt-2 border-t border-slate-800 shrink-0">
+              <button
+                onClick={() => setShowHelperDrawer(false)}
+                className="w-full py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium text-xs transition text-center"
+              >
+                Back to Patient Chat
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Patient Vitals Quick Bar */}
         <div className="bg-[#0b101c] border-b border-slate-800/60 px-3.5 py-1 flex items-center justify-between text-[10.5px] text-slate-400 overflow-x-auto whitespace-nowrap gap-2.5 scrollbar-none shrink-0">
           <span className="flex items-center gap-1 font-medium text-slate-300">
@@ -442,7 +708,7 @@ export default function App() {
           <span>Temp: <strong className="text-slate-200">{currentCase.vitals.temp}</strong></span>
         </div>
 
-        {/* Message Stream with min-h-0 to avoid pushing bottom bar */}
+        {/* Message Stream */}
         <div className="flex-1 min-h-0 overflow-y-auto p-3 space-y-2.5 scrollbar-thin">
           {/* Medical Privacy & Simulation Banner */}
           <div className="text-center my-1">
@@ -467,7 +733,7 @@ export default function App() {
                 >
                   <p className="whitespace-pre-wrap">{m.text}</p>
                   
-                  {/* Subtle RAG Grounding Citation Badge */}
+                  {/* RAG Grounding Citation Badge */}
                   {!isDoctor && m.sourceCitation && (
                     <div className="mt-1.5 pt-1.5 border-t border-slate-700/40 flex items-center justify-between gap-1 text-[9.5px]">
                       <a 
@@ -504,7 +770,7 @@ export default function App() {
           {isTyping && (
             <div className="flex items-center gap-2">
               <div className="bg-slate-800/90 border border-slate-700/60 rounded-2xl rounded-bl-xs px-3 py-2 flex items-center gap-1.5 shadow-sm">
-                <span className="text-[11px] text-slate-400 mr-1 font-medium">{currentCase.patientName} is typing</span>
+                <span className="text-[11px] text-slate-400 mr-1 font-medium">{currentCase.patientName} is speaking</span>
                 <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-bounce"></span>
                 <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-bounce [animation-delay:0.2s]"></span>
                 <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-bounce [animation-delay:0.4s]"></span>
@@ -512,59 +778,238 @@ export default function App() {
             </div>
           )}
 
+          {/* IN-CHAT OSCE CLINICAL EVALUATION & TEACHING DEBRIEF CARD */}
+          {evaluationData && (
+            <div className="mt-4 rounded-2xl bg-gradient-to-b from-[#111a2e] to-[#0a101f] border border-blue-500/40 p-3.5 shadow-2xl text-slate-100 space-y-3 animate-in fade-in duration-300">
+              
+              {/* Header Badge & Score */}
+              <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+                <div className="flex items-center gap-2">
+                  {evaluationData.isCorrect ? (
+                    <div className="w-8 h-8 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center border border-emerald-500/30">
+                      <CheckCircle2 className="w-4 h-4" />
+                    </div>
+                  ) : evaluationData.isSurrender ? (
+                    <div className="w-8 h-8 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center border border-amber-500/30">
+                      <AlertCircle className="w-4 h-4" />
+                    </div>
+                  ) : (
+                    <div className="w-8 h-8 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center border border-rose-500/30">
+                      <AlertCircle className="w-4 h-4" />
+                    </div>
+                  )}
+
+                  <div>
+                    <h3 className="text-xs font-bold uppercase tracking-wider">
+                      {evaluationData.isCorrect 
+                        ? 'Diagnosis Confirmed' 
+                        : evaluationData.isSurrender 
+                          ? 'Handover to Attending' 
+                          : 'Misdiagnosis'}
+                    </h3>
+                    <p className="text-[10px] text-slate-400">OSCE Simulation Evaluation</p>
+                  </div>
+                </div>
+
+                <div className="text-right">
+                  <div className={`text-base font-black ${
+                    evaluationData.score >= 70 ? 'text-emerald-400' : evaluationData.score >= 50 ? 'text-amber-400' : 'text-rose-400'
+                  }`}>
+                    {evaluationData.score}<span className="text-[10px] text-slate-400 font-normal">/100</span>
+                  </div>
+                  <span className="text-[9px] text-slate-400 uppercase font-semibold">Score</span>
+                </div>
+              </div>
+
+              {/* Diagnosis Match Comparison Box */}
+              <div className="p-2.5 rounded-xl bg-slate-900/80 border border-slate-800 space-y-1.5 text-xs">
+                <div className="flex items-start justify-between gap-2">
+                  <span className="text-[10.5px] text-slate-400">Your Clinical Input:</span>
+                  <span className="font-semibold text-slate-200 text-right">{evaluationData.diagnosedCondition}</span>
+                </div>
+                <div className="flex items-start justify-between gap-2 pt-1.5 border-t border-slate-800/80">
+                  <span className="text-[10.5px] text-emerald-400 font-medium">Confirmed Diagnosis:</span>
+                  <span className="font-bold text-emerald-300 text-right">{evaluationData.trueDiagnosis}</span>
+                </div>
+              </div>
+
+              {/* Clinical Summary Note */}
+              <p className="text-[11px] text-slate-300 leading-relaxed bg-blue-500/10 border border-blue-500/20 rounded-xl p-2.5">
+                {evaluationData.summary}
+              </p>
+
+              {/* Teaching Point: Pathophysiology */}
+              {evaluationData.teaching?.pathophysiology && (
+                <div className="space-y-1">
+                  <h4 className="text-[11px] font-semibold text-blue-400 flex items-center gap-1">
+                    <span>🔬</span>
+                    <span>Disease Pathophysiology</span>
+                  </h4>
+                  <p className="text-[11px] text-slate-300 leading-relaxed bg-slate-900/60 p-2.5 rounded-xl border border-slate-800/80">
+                    {evaluationData.teaching.pathophysiology}
+                  </p>
+                </div>
+              )}
+
+              {/* Teaching Point: Emergency Protocol */}
+              {Array.isArray(evaluationData.teaching?.emergencyProtocol) && (
+                <div className="space-y-1.5">
+                  <h4 className="text-[11px] font-semibold text-amber-400 flex items-center gap-1">
+                    <span>🚨</span>
+                    <span>Immediate Emergency Protocol</span>
+                  </h4>
+                  <div className="space-y-1">
+                    {evaluationData.teaching.emergencyProtocol.map((step, sIdx) => (
+                      <div key={sIdx} className="text-[10.5px] text-slate-300 bg-slate-900/50 px-2 py-1.5 rounded-lg border border-slate-800/60 flex items-start gap-1.5">
+                        <span className="text-amber-400 font-bold shrink-0">{sIdx + 1}.</span>
+                        <span className="leading-snug">{step}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Teaching Point: High-Yield Clinical Pearls */}
+              {evaluationData.teaching?.highYieldPearls && (
+                <div className="space-y-1">
+                  <h4 className="text-[11px] font-semibold text-emerald-400 flex items-center gap-1">
+                    <span>💡</span>
+                    <span>High-Yield Clinical Pearl</span>
+                  </h4>
+                  <p className="text-[11px] text-slate-300 leading-relaxed bg-slate-900/60 p-2.5 rounded-xl border border-slate-800/80">
+                    {evaluationData.teaching.highYieldPearls}
+                  </p>
+                </div>
+              )}
+
+              {/* Authoritative Reference Link */}
+              <div className="pt-2 border-t border-slate-800 flex items-center justify-between text-[10px]">
+                <a
+                  href={evaluationData.paperUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-cyan-400 hover:text-cyan-300 font-medium flex items-center gap-1 underline underline-offset-2 transition truncate max-w-[240px]"
+                >
+                  <BookOpen className="w-3 h-3 shrink-0" />
+                  <span className="truncate">{evaluationData.paperTitle}</span>
+                  <ExternalLink className="w-2.5 h-2.5 shrink-0" />
+                </a>
+                <span className="text-slate-400 shrink-0">{evaluationData.paperSource}</span>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="pt-2 grid grid-cols-2 gap-2">
+                <button
+                  onClick={handleRestart}
+                  className="py-2 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold flex items-center justify-center gap-1.5 transition border border-slate-700"
+                >
+                  <RotateCcw className="w-3 h-3" />
+                  <span>Restart Case</span>
+                </button>
+                <button
+                  onClick={handleNextCase}
+                  className="py-2 px-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition shadow-md"
+                >
+                  <span>Next Case</span>
+                  <ArrowRight className="w-3 h-3" />
+                </button>
+              </div>
+
+            </div>
+          )}
+
           <div ref={messagesEndRef} />
         </div>
 
         {/* Quick Question Suggestion Chips */}
-        <div className="bg-[#0b101c] border-t border-slate-800/70 py-1.5 px-2.5 shrink-0">
-          <div className="flex items-center gap-1 mb-1 text-[9px] text-slate-400 font-medium px-1">
-            <Sparkles className="w-2.5 h-2.5 text-cyan-400" />
-            <span>Suggested Questions</span>
-          </div>
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 scrollbar-none">
-            {quickQuestions.map((q, idx) => (
-              <button
-                key={idx}
-                onClick={() => handleSend(q.text)}
-                disabled={isTyping}
-                className="shrink-0 text-[11px] bg-slate-800/90 hover:bg-slate-700 active:bg-blue-600 text-slate-300 hover:text-white border border-slate-700/60 rounded-full px-2.5 py-1 transition whitespace-nowrap shadow-xs disabled:opacity-50"
+        {simulationState === 'active' && (
+          <div className="bg-[#0b101c] border-t border-slate-800/70 py-1.5 px-2.5 shrink-0">
+            <div className="flex items-center justify-between gap-1 mb-1 text-[9px] text-slate-400 font-medium px-1">
+              <div className="flex items-center gap-1">
+                <Sparkles className="w-2.5 h-2.5 text-cyan-400" />
+                <span>Suggested Questions</span>
+              </div>
+              <button 
+                onClick={() => setShowHelperDrawer(true)} 
+                className="text-amber-400 hover:underline flex items-center gap-0.5"
               >
-                {q.label}
+                <span>Full Guide</span>
+                <ArrowRight className="w-2 h-2" />
               </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Android Bottom Input Bar */}
-        <div className="bg-[#0f172a] border-t border-slate-800 px-3 py-2 z-10 shrink-0">
-          <form 
-            onSubmit={(e) => {
-              e.preventDefault();
-              handleSend();
-            }}
-            className="flex items-center gap-2"
-          >
-            <div className="flex-1 relative flex items-center">
-              <input
-                type="text"
-                value={inputText}
-                onChange={(e) => setInputText(e.target.value)}
-                placeholder="Ask patient a question..."
-                disabled={isTyping}
-                className="w-full bg-[#1e293b] text-slate-100 placeholder-slate-400 text-xs rounded-full pl-3.5 pr-3 py-2 border border-slate-700/70 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition shadow-inner disabled:opacity-50"
-              />
             </div>
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 scrollbar-none">
+              {quickQuestions.map((q, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => handleSend(q.text)}
+                  disabled={isTyping}
+                  className="shrink-0 text-[11px] bg-slate-800/90 hover:bg-slate-700 active:bg-blue-600 text-slate-300 hover:text-white border border-slate-700/60 rounded-full px-2.5 py-1 transition whitespace-nowrap shadow-xs disabled:opacity-50"
+                >
+                  {q.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
-            <button
-              type="submit"
-              disabled={!inputText.trim() || isTyping}
-              className="w-8 h-8 rounded-full bg-blue-600 hover:bg-blue-500 active:scale-95 disabled:opacity-40 disabled:pointer-events-none flex items-center justify-center text-white transition shadow-md shrink-0"
-              title="Send question"
+        {/* Android Bottom Bar: Active Input OR Concluded Action Bar */}
+        {simulationState === 'active' ? (
+          <div className="bg-[#0f172a] border-t border-slate-800 px-3 py-2 z-10 shrink-0">
+            <form 
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleSend();
+              }}
+              className="flex items-center gap-2"
             >
-              <Send className="w-3.5 h-3.5 ml-0.5" />
-            </button>
-          </form>
-        </div>
+              <div className="flex-1 relative flex items-center">
+                <input
+                  type="text"
+                  value={inputText}
+                  onChange={(e) => setInputText(e.target.value)}
+                  placeholder="Ask patient or diagnose (e.g. 'You are having a...')"
+                  disabled={isTyping}
+                  className="w-full bg-[#1e293b] text-slate-100 placeholder-slate-400 text-xs rounded-full pl-3.5 pr-3 py-2 border border-slate-700/70 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition shadow-inner disabled:opacity-50"
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={!inputText.trim() || isTyping}
+                className="w-8 h-8 rounded-full bg-blue-600 hover:bg-blue-500 active:scale-95 disabled:opacity-40 disabled:pointer-events-none flex items-center justify-center text-white transition shadow-md shrink-0"
+                title="Send question or diagnosis"
+              >
+                <Send className="w-3.5 h-3.5 ml-0.5" />
+              </button>
+            </form>
+          </div>
+        ) : (
+          <div className="bg-[#0f172a] border-t border-slate-800 p-2.5 flex items-center justify-between gap-2 z-10 shrink-0 animate-in fade-in">
+            <div className="flex items-center gap-1.5 text-slate-300 min-w-0">
+              <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+              <div className="truncate">
+                <span className="font-semibold text-xs text-slate-200">Simulation Concluded</span>
+                <p className="text-[10px] text-slate-400 truncate">Debrief & NCBI Guidelines Unlocked</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-1.5 shrink-0">
+              <button
+                onClick={handleRestart}
+                className="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium flex items-center gap-1 border border-slate-700 transition"
+              >
+                <RotateCcw className="w-3 h-3" />
+                <span>Restart</span>
+              </button>
+              <button
+                onClick={handleNextCase}
+                className="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-medium text-xs flex items-center gap-1 shadow-md transition"
+              >
+                <span>Next Case</span>
+                <ArrowRight className="w-3 h-3" />
+              </button>
+            </div>
+          </div>
+        )}
 
       </div>
     </div>
