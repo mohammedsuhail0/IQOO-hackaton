@@ -31,6 +31,7 @@ Over **48% of diagnostic errors** made by interns and junior doctors stem from i
 ---
 
 ## 🚀 Live Demo & Repository Assets
+* **Live Production Deployment:** [https://clinosce-iq.vercel.app](https://clinosce-iq.vercel.app)
 * **GitHub Repository:** [https://github.com/mohammedsuhail0/IQOO-hackaton](https://github.com/mohammedsuhail0/IQOO-hackaton)
 * **Presentation Deck (40% Text / 60% Graphs):** `ClinOSCE_iQ_Pitch.pptx` (available in repository root)
 
