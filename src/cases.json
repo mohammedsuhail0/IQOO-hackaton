@@ -1,206 +1,680 @@
 [
   {
-    "id": "case-1",
-    "title": "Acute Abdominal Distress",
-    "patientName": "Rahul Sharma",
-    "age": 28,
-    "gender": "Male",
-    "occupation": "Software Engineer",
-    "chiefComplaint": "Severe pain in the lower right side of my stomach since early morning.",
-    "vitals": {
-      "bp": "128/84 mmHg",
-      "heartRate": "104 bpm",
-      "respRate": "19 /min",
-      "temp": "38.3 °C (101.0 °F)",
-      "spo2": "99%"
-    },
-    "trueDiagnosis": "Acute Appendicitis",
-    "allowedDiagnoses": ["Acute Appendicitis", "Appendicitis", "Perforated Appendix"],
-    "differentials": [
-      "Mesenteric Adenitis",
-      "Renal Colic / Nephrolithiasis",
-      "Acute Gastroenteritis",
-      "Meckel's Diverticulitis"
-    ],
-    "urgentOrders": [
-      "Abdominal Ultrasound / CT Abdomen",
-      "Complete Blood Count (CBC) with differential",
-      "Urgent General Surgical Consultation",
-      "NPO (Nil Per Os) order for surgery prep"
-    ],
-    "goldenQuestions": [
-      {
-        "keywords": ["when", "start", "duration", "hours", "how long"],
-        "answer": "It began around 3 AM as a dull, crampy ache around my navel, but by 7 AM it shifted down to my lower right side and became sharp and constant."
-      },
-      {
-        "keywords": ["nausea", "vomit", "throw up", "puke"],
-        "answer": "Yes, I felt intensely nauseated and threw up twice this morning after the pain moved."
-      },
-      {
-        "keywords": ["fever", "chills", "hot", "temperature"],
-        "answer": "Yes, I've had shivering chills since breakfast and feel hot to the touch."
-      },
-      {
-        "keywords": ["appetite", "eat", "hungry", "food"],
-        "answer": "Zero appetite. The thought of food makes me want to throw up."
-      },
-      {
-        "keywords": ["urinate", "urine", "pee", "burning"],
-        "answer": "No burning or blood when I urinate, just regular urination."
-      },
-      {
-        "keywords": ["bowel", "stool", "diarrhea", "constipated"],
-        "answer": "I haven't passed stool or gas since last evening. Feels constipated."
-      },
-      {
-        "keywords": ["worse", "better", "movement", "cough", "walk"],
-        "answer": "Every bump on the road or cough makes my lower right abdomen throb agonizingly."
-      }
-    ],
-    "physicalExam": {
-      "pupilReflex": {
-        "finding": "Pupils Equal, Round, and Reactive to Light (PERRLA). Mild conjunctival dehydration.",
-        "normal": true
-      },
-      "palpation": {
-        "finding": "Marked tenderness at McBurney's Point. Involuntary muscle guarding. Positive rebound tenderness and positive Rovsing's sign.",
-        "sign": "Positive McBurney's Sign"
-      },
-      "chestAuscultation": "Bilateral air entry normal. Tachycardia without murmurs."
-    },
-    "defaultResponse": "I feel really sick, doctor. The pain is centered in my lower right abdomen and it hurts whenever I move or breathe deeply."
-  },
-  {
-    "id": "case-2",
-    "title": "Acute Crushing Chest Pain",
+    "id": "cardio-1",
+    "category": "Cardiology",
+    "title": "Acute ST-Elevation Myocardial Infarction (STEMI)",
     "patientName": "Ramesh Varma",
     "age": 56,
     "gender": "Male",
-    "occupation": "Bank Manager",
-    "chiefComplaint": "Crushing chest tightness and heaviness, feels like an elephant sitting on my chest.",
+    "occupation": "Bank Branch Manager",
+    "chiefComplaint": "Crushing chest tightness like an elephant sitting on my chest, radiating down my left arm.",
     "vitals": {
-      "bp": "158/96 mmHg",
+      "bp": "156/96 mmHg",
       "heartRate": "108 bpm",
       "respRate": "24 /min",
       "temp": "36.8 °C",
       "spo2": "93% on room air"
     },
-    "trueDiagnosis": "Acute Myocardial Infarction",
-    "allowedDiagnoses": ["Acute Myocardial Infarction", "Myocardial Infarction", "STEMI", "Heart Attack", "Acute Coronary Syndrome"],
+    "trueDiagnosis": "Acute ST-Elevation Myocardial Infarction",
+    "allowedDiagnoses": ["STEMI", "Acute Myocardial Infarction", "Myocardial Infarction", "Acute Coronary Syndrome", "Heart Attack"],
     "differentials": [
-      "Aortic Dissection",
-      "Pulmonary Embolism",
-      "Gastroesophageal Reflux Disease (GERD)",
-      "Acute Pericarditis"
+      "Acute Aortic Dissection",
+      "Acute Pulmonary Embolism",
+      "Acute Pericarditis",
+      "Gastroesophageal Reflux Spasm"
     ],
     "urgentOrders": [
-      "Immediate 12-Lead ECG within 10 minutes",
-      "High-Sensitivity Cardiac Troponin-I/T",
-      "Aspirin 325 mg chewed + Clopidogrel 300 mg",
-      "Activate Cardiac Cath Lab for Emergency PCI"
+      "Immediate 12-lead ECG within 10 minutes",
+      "Emergency Cardiac Catheterization (PCI Activation)",
+      "High-sensitivity Cardiac Troponin I/T",
+      "Dual Antiplatelet Therapy (Aspirin 325mg + Ticagrelor 180mg)"
     ],
     "goldenQuestions": [
       {
-        "keywords": ["where", "radiate", "spread", "arm", "jaw", "neck", "back"],
-        "answer": "The pain is right in the center of my chest and radiates down my left arm and up into my left jaw."
+        "keywords": ["radiate", "spread", "arm", "jaw", "neck", "shoulder"],
+        "answer": "The pain is right in the center of my breastbone and spreads heavily into my left arm and left jaw."
       },
       {
-        "keywords": ["sweat", "sweating", "perspiration", "cold"],
-        "answer": "Yes, I am sweating profusely and drenched in cold sweat."
+        "keywords": ["sweat", "cold", "clammy", "drenched", "perspiring"],
+        "answer": "Yes, I broke out into a freezing cold sweat as soon as the pressure started."
+      },
+      {
+        "keywords": ["when", "start", "duration", "stairs", "exercise", "rest"],
+        "answer": "It struck about 45 minutes ago while climbing the office staircase. Rest hasn't helped at all."
+      },
+      {
+        "keywords": ["diabetes", "sugar", "hypertension", "bp", "smoking", "smoke"],
+        "answer": "I have had diabetes and high blood pressure for 9 years and have smoked a pack a day since college."
       },
       {
         "keywords": ["breathe", "breath", "shortness", "dyspnea"],
-        "answer": "I can't take a full breath, I feel suffocated and air-hungry."
-      },
-      {
-        "keywords": ["smoking", "smoke", "tobacco", "cigarettes"],
-        "answer": "I have been smoking a pack a day for 25 years."
-      },
-      {
-        "keywords": ["diabetes", "sugar", "hypertension", "bp", "pressure"],
-        "answer": "I have high blood pressure and Type-2 Diabetes for 8 years, but I frequently forget my medications."
-      },
-      {
-        "keywords": ["when", "start", "exercise", "rest", "duration"],
-        "answer": "It started 45 minutes ago while climbing the office stairs and has not relieved with rest."
+        "answer": "I feel suffocated, like I cannot expand my lungs enough."
       }
     ],
     "physicalExam": {
       "pupilReflex": {
-        "finding": "PERRLA. Pupils dilated secondary to sympathetic drive/stress.",
+        "finding": "PERRLA. Pupils dilated secondary to acute sympathetic surge.",
         "normal": true
       },
       "palpation": {
-        "finding": "Cold, clammy, diaphoretic skin. S4 gallop heard on cardiac auscultation. Bilateral lung bases clear.",
-        "sign": "Diaphoresis & S4 Heart Sound"
+        "finding": "Cold, clammy, pale extremities. Soft S4 gallop audible over cardiac apex. Bilateral lung bases clear.",
+        "sign": "Cold Diaphoresis & S4 Gallop"
       },
-      "chestAuscultation": "Tachycardia, S4 audible, mild bibasilar inspiratory rales."
+      "chestAuscultation": "Tachycardia at 108 bpm, S4 gallop present, no murmurs."
     },
-    "defaultResponse": "Please help, doctor. It's a crushing heaviness in the center of my chest, and I feel lightheaded and drenched in cold sweat."
+    "sourceCitation": {
+      "title": "AHA/ACC STEMI Clinical Practice Guidelines",
+      "organization": "National Center for Biotechnology Information (NCBI) / StatPearls",
+      "year": 2024,
+      "sourceUrl": "https://www.ncbi.nlm.nih.gov/books/NBK532281/"
+    },
+    "defaultResponse": "Please help me doctor, this chest pressure is unbearable and my left arm feels numb and heavy."
   },
   {
-    "id": "case-3",
-    "title": "Severe Respiratory Distress",
-    "patientName": "Priya Nair",
-    "age": 22,
+    "id": "cardio-2",
+    "category": "Cardiology",
+    "title": "Acute Decompensated Heart Failure (ADHF)",
+    "patientName": "Savitri Devi",
+    "age": 68,
     "gender": "Female",
-    "occupation": "College Student",
-    "chiefComplaint": "I can barely breathe... my blue inhaler... isn't working at all...",
+    "occupation": "Retired School Principal",
+    "chiefComplaint": "I cannot breathe when lying flat... I have to sleep sitting upright with three pillows.",
     "vitals": {
-      "bp": "122/80 mmHg",
-      "heartRate": "122 bpm",
-      "respRate": "30 /min",
-      "temp": "37.0 °C",
-      "spo2": "90% on room air"
+      "bp": "172/104 mmHg",
+      "heartRate": "114 bpm",
+      "respRate": "28 /min",
+      "temp": "37.1 °C",
+      "spo2": "88% on room air"
     },
-    "trueDiagnosis": "Acute Severe Asthma Exacerbation",
-    "allowedDiagnoses": ["Acute Severe Asthma", "Asthma Exacerbation", "Acute Asthma", "Status Asthmaticus"],
+    "trueDiagnosis": "Acute Decompensated Heart Failure with Pulmonary Edema",
+    "allowedDiagnoses": ["Heart Failure", "Congestive Heart Failure", "Acute Pulmonary Edema", "ADHF", "Acute Heart Failure"],
     "differentials": [
-      "Pneumothorax",
-      "Anaphylaxis",
-      "Acute Bronchitis",
-      "Foreign Body Aspiration"
+      "Acute Exacerbation of COPD",
+      "Bilateral Pneumonia",
+      "Non-Cardiogenic ARDS",
+      "Massive Pulmonary Embolism"
     ],
     "urgentOrders": [
-      "Continuous High-Flow Nebulized Salbutamol + Ipratropium",
-      "Supplemental High-Flow Oxygen to maintain SpO2 94-98%",
-      "Systemic IV Corticosteroids (Hydrocortisone 100mg)",
-      "Urgent Arterial Blood Gas (ABG) & Peak Expiratory Flow"
+      "IV Furosemide (Lasix) 40-80 mg bolus",
+      "Continuous Positive Airway Pressure (CPAP / BiPAP)",
+      "Urgent Bedside Transthoracic Echocardiogram",
+      "Serum NT-proBNP / BNP & Troponin"
     ],
     "goldenQuestions": [
       {
-        "keywords": ["inhaler", "puffs", "medicine", "salbutamol", "dose"],
-        "answer": "(Gasping) Took 6 puffs... of my rescue inhaler... in the last hour... zero relief..."
+        "keywords": ["flat", "lie", "pillows", "orthopnea", "sleep"],
+        "answer": "If I lie flat even for two minutes, I feel like I'm drowning. I've been sleeping propped up on 3 pillows."
       },
       {
-        "keywords": ["trigger", "dust", "smoke", "pollen", "cat", "dog", "cold"],
-        "answer": "Was cleaning... an old dusty storage closet... in my dorm this morning..."
+        "keywords": ["feet", "legs", "ankles", "swelling", "edema"],
+        "answer": "My ankles and shins have swollen like balloons over the past four days. My slippers don't fit."
       },
       {
-        "keywords": ["talk", "speak", "sentence"],
-        "answer": "(Struggles to speak more than 2-3 words per breath)."
+        "keywords": ["cough", "pink", "frothy", "phlegm"],
+        "answer": "I have this constant bubbling cough that brings up pink, frothy fluid."
       },
       {
-        "keywords": ["hospital", "icu", "intubated", "past", "history"],
-        "answer": "Admitted to ICU... two years ago... for a severe attack..."
+        "keywords": ["night", "wake", "suffocation", "gasping"],
+        "answer": "Yes, I wake up abruptly after 2 hours gasping and choking for air."
       },
       {
-        "keywords": ["cough", "phlegm", "mucus", "sputum"],
-        "answer": "Dry... tight hacking cough... no phlegm..."
+        "keywords": ["salt", "water", "medication", "pills", "stopped"],
+        "answer": "I attended a wedding 3 days ago and ate heavy salty feast food, and forgot my water pills."
       }
     ],
     "physicalExam": {
       "pupilReflex": {
-        "finding": "PERRLA. Wide eyes, visible accessory muscle use (sternocleidomastoid retractions).",
+        "finding": "PERRLA. Marked jugular venous distention (JVD) visible up to angle of mandible (JVP 8 cm).",
         "normal": true
       },
       "palpation": {
-        "finding": "Intercostal retractions, suprasternal indrawing, marked respiratory fatigue.",
-        "sign": "Accessory Muscle Retractions"
+        "finding": "Bilateral 3+ pitting pedal edema up to mid-calf. Displaced hyperdynamic apical impulse.",
+        "sign": "Jugular Venous Distension (JVD) & Pitting Edema"
       },
-      "chestAuscultation": "Widespread high-pitched expiratory wheezing bilaterally, prolonged expiratory phase."
+      "chestAuscultation": "Coarse bibasilar inspiratory crackles (rales) extending up to mid-lung zones with S3 gallop."
     },
-    "defaultResponse": "I... can't breathe... chest feels... locked shut..."
+    "sourceCitation": {
+      "title": "Heart Failure: Evaluation and Management Guidelines",
+      "organization": "NCBI Bookshelf / National Institutes of Health",
+      "year": 2024,
+      "sourceUrl": "https://www.ncbi.nlm.nih.gov/books/NBK448195/"
+    },
+    "defaultResponse": "I can't... catch my breath... chest feels like it's filling with water..."
+  },
+  {
+    "id": "cardio-3",
+    "category": "Cardiology",
+    "title": "Acute Pericarditis",
+    "patientName": "Arjun Mehta",
+    "age": 29,
+    "gender": "Male",
+    "occupation": "Graphic Designer",
+    "chiefComplaint": "Sharp chest pain that gets much worse when I lie down or breathe in, and feels better when I lean forward.",
+    "vitals": {
+      "bp": "124/80 mmHg",
+      "heartRate": "96 bpm",
+      "respRate": "18 /min",
+      "temp": "38.2 °C",
+      "spo2": "98% on room air"
+    },
+    "trueDiagnosis": "Acute Pericarditis",
+    "allowedDiagnoses": ["Acute Pericarditis", "Pericarditis", "Viral Pericarditis"],
+    "differentials": [
+      "Acute Coronary Syndrome",
+      "Pulmonary Embolism",
+      "Pleurisy / Pleuritis",
+      "Gastroesophageal Reflux Disease"
+    ],
+    "urgentOrders": [
+      "12-Lead ECG (Evaluate for diffuse ST-elevation & PR-depression)",
+      "High-Dose Oral NSAIDs (Ibuprofen 600-800mg) + Colchicine 0.5mg",
+      "Transthoracic Echocardiogram (Rule out pericardial effusion)",
+      "Serum CRP, ESR, and Troponin"
+    ],
+    "goldenQuestions": [
+      {
+        "keywords": ["lean", "forward", "lying", "position", "relief", "worse"],
+        "answer": "When I lean forward sitting on the edge of the bed, the stabbing pain lessens. Lying flat is agonizing."
+      },
+      {
+        "keywords": ["breathe", "breath", "deep", "cough", "inspiration"],
+        "answer": "Taking a deep breath feels like a knife stabbing into my chest."
+      },
+      {
+        "keywords": ["virus", "cold", "flu", "fever", "throat", "recent"],
+        "answer": "I had a bad viral flu with fever, runny nose, and body aches about a week ago."
+      },
+      {
+        "keywords": ["radiate", "spread", "trapezius", "shoulder", "back"],
+        "answer": "The pain shoots up into my left trapezius shoulder ridge."
+      }
+    ],
+    "physicalExam": {
+      "pupilReflex": {
+        "finding": "PERRLA. Anxious facies, sits leaning forward on exam table.",
+        "normal": true
+      },
+      "palpation": {
+        "finding": "No chest wall localized tenderness. Normal peripheral pulses.",
+        "sign": "Pericardial Friction Rub"
+      },
+      "chestAuscultation": "High-pitched superficial scratchy friction rub heard best at left sternal border during end-expiration."
+    },
+    "sourceCitation": {
+      "title": "Acute Pericarditis: Pathophysiology and Practice",
+      "organization": "NCBI Bookshelf / National Institutes of Health",
+      "year": 2024,
+      "sourceUrl": "https://www.ncbi.nlm.nih.gov/books/NBK431080/"
+    },
+    "defaultResponse": "Doctor, whenever I try to lie flat, the sharp pain spikes immediately. Sitting forward helps."
+  },
+  {
+    "id": "cardio-4",
+    "category": "Cardiology",
+    "title": "Paroxysmal Supraventricular Tachycardia (PSVT)",
+    "patientName": "Ananya Sen",
+    "age": 24,
+    "gender": "Female",
+    "occupation": "University Student",
+    "chiefComplaint": "My heart suddenly started racing at 180 beats a minute out of nowhere while drinking coffee.",
+    "vitals": {
+      "bp": "106/72 mmHg",
+      "heartRate": "184 bpm (regular)",
+      "respRate": "20 /min",
+      "temp": "36.9 °C",
+      "spo2": "99%"
+    },
+    "trueDiagnosis": "Paroxysmal Supraventricular Tachycardia (PSVT)",
+    "allowedDiagnoses": ["PSVT", "Supraventricular Tachycardia", "SVT", "AVNRT", "AVRT"],
+    "differentials": [
+      "Sinus Tachycardia (Anxiety/Caffeine)",
+      "Atrial Fibrillation with RVR",
+      "Ventricular Tachycardia",
+      "Atrial Flutter"
+    ],
+    "urgentOrders": [
+      "Modified Valsalva Maneuver (Vagal Maneuver)",
+      "IV Adenosine 6 mg rapid push with saline flush",
+      "Continuous Cardiac Rhythm Telemetry & 12-lead ECG",
+      "Serum Electrolytes (Potassium, Magnesium)"
+    ],
+    "goldenQuestions": [
+      {
+        "keywords": ["sudden", "start", "stop", "abrupt", "gradual"],
+        "answer": "It was like an on/off light switch! One second normal, next second racing like a hummingbird."
+      },
+      {
+        "keywords": ["coffee", "energy", "caffeine", "stress", "alcohol"],
+        "answer": "I pulled an all-nighter for exams and drank three large cold coffees this morning."
+      },
+      {
+        "keywords": ["dizzy", "lightheaded", "faint", "pass out", "vision"],
+        "answer": "Yes, I felt lightheaded and my vision got blurry when it started pounding."
+      },
+      {
+        "keywords": ["past", "before", "episodes", "history"],
+        "answer": "I had 2 similar racing episodes last year, but they stopped within 5 minutes after splashing cold water."
+      }
+    ],
+    "physicalExam": {
+      "pupilReflex": {
+        "finding": "PERRLA. Normal ocular exam, anxious, flushed countenance.",
+        "normal": true
+      },
+      "palpation": {
+        "finding": "Rapid, regular peripheral pulses at 184 bpm. No peripheral edema.",
+        "sign": "Extremely Rapid Regular Heart Rate"
+      },
+      "chestAuscultation": "Regular tachycardia at 184 bpm, no murmurs or extra heart sounds audible."
+    },
+    "sourceCitation": {
+      "title": "Supraventricular Tachycardia Emergency Management",
+      "organization": "NCBI Bookshelf / National Institutes of Health",
+      "year": 2024,
+      "sourceUrl": "https://www.ncbi.nlm.nih.gov/books/NBK482348/"
+    },
+    "defaultResponse": "My heart is fluttering so fast in my throat, doctor! Please make it slow down."
+  },
+  {
+    "id": "cardio-5",
+    "category": "Cardiology",
+    "title": "Acute Infective Endocarditis",
+    "patientName": "Vikram Roy",
+    "age": 44,
+    "gender": "Male",
+    "occupation": "Contractor",
+    "chiefComplaint": "Spiking fevers, drenching night sweats, weight loss, and painless red spots on my palms for two weeks.",
+    "vitals": {
+      "bp": "118/68 mmHg",
+      "heartRate": "98 bpm",
+      "respRate": "18 /min",
+      "temp": "39.1 °C (102.4 °F)",
+      "spo2": "97%"
+    },
+    "trueDiagnosis": "Subacute / Acute Infective Endocarditis",
+    "allowedDiagnoses": ["Infective Endocarditis", "Bacterial Endocarditis", "Endocarditis"],
+    "differentials": [
+      "Occult Bacteremia / Sepsis",
+      "Systemic Lupus Erythematosus (SLE)",
+      "Lymphoma",
+      "Acute Rheumatic Fever"
+    ],
+    "urgentOrders": [
+      "3 sets of Blood Cultures from separate venipuncture sites",
+      "Urgent Transthoracic / Transesophageal Echocardiogram (TEE)",
+      "Empiric IV Antibiotics (Vancomycin + Ceftriaxone) post-cultures",
+      "Erythrocyte Sedimentation Rate (ESR) & Rheumatoid Factor"
+    ],
+    "goldenQuestions": [
+      {
+        "keywords": ["spots", "palms", "soles", "hands", "red", "rash"],
+        "answer": "I noticed small flat, reddish painless spots on my palms and soles about five days ago."
+      },
+      {
+        "keywords": ["dental", "tooth", "teeth", "extraction", "dentist"],
+        "answer": "Yes! I had a complex wisdom tooth extraction four weeks ago with significant bleeding."
+      },
+      {
+        "keywords": ["valve", "murmur", "heart", "congenital", "bicuspid"],
+        "answer": "A doctor told me years ago I had a mild bicuspid aortic valve murmur."
+      },
+      {
+        "keywords": ["weight", "appetite", "sweat", "night", "fever"],
+        "answer": "I have lost 6 kilograms over the past month and wake up drenched in sweat every single night."
+      }
+    ],
+    "physicalExam": {
+      "pupilReflex": {
+        "finding": "Ophthalmoscopy reveals retinal hemorrhages with pale central spots (Roth Spots).",
+        "normal": false
+      },
+      "palpation": {
+        "finding": "Non-tender, erythematous macules on palms (Janeway Lesions). Splinter hemorrhages under fingernails.",
+        "sign": "Janeway Lesions & Splinter Hemorrhages"
+      },
+      "chestAuscultation": "New-onset harsh early diastolic decrescendo murmur over right upper sternal border."
+    },
+    "sourceCitation": {
+      "title": "Infective Endocarditis Duke Criteria & Practice Guide",
+      "organization": "NCBI Bookshelf / National Institutes of Health",
+      "year": 2024,
+      "sourceUrl": "https://www.ncbi.nlm.nih.gov/books/NBK537130/"
+    },
+    "defaultResponse": "I keep shivering with high fever every night, and these strange red spots appeared on my palms."
+  },
+  {
+    "id": "ent-1",
+    "category": "ENT",
+    "title": "Acute Peritonsillar Abscess (Quinsy)",
+    "patientName": "Karan Malhotra",
+    "age": 21,
+    "gender": "Male",
+    "occupation": "College Football Player",
+    "chiefComplaint": "Severe one-sided throat agony, cannot swallow my own saliva, and my voice sounds muffled like a hot potato.",
+    "vitals": {
+      "bp": "126/82 mmHg",
+      "heartRate": "102 bpm",
+      "respRate": "18 /min",
+      "temp": "38.9 °C (102.0 °F)",
+      "spo2": "98%"
+    },
+    "trueDiagnosis": "Peritonsillar Abscess (Quinsy)",
+    "allowedDiagnoses": ["Peritonsillar Abscess", "Quinsy", "Peritonsillar Phlegmon"],
+    "differentials": [
+      "Severe Acute Bacterial Tonsillitis",
+      "Retropharyngeal Abscess",
+      "Infectious Mononucleosis (EBV)",
+      "Epiglottitis"
+    ],
+    "urgentOrders": [
+      "Needle Aspiration / Incision and Drainage of Abscess",
+      "IV Ampicillin-Sulbactam + IV Dexamethasone",
+      "Airway Assessment & Continuous Pulse Oximetry",
+      "Throat Culture & Monospot Test"
+    ],
+    "goldenQuestions": [
+      {
+        "keywords": ["swallow", "saliva", "spit", "drool", "pain"],
+        "answer": "I cannot swallow at all. It hurts so badly that I am drooling into a tissue cup."
+      },
+      {
+        "keywords": ["mouth", "open", "jaw", "trismus", "chew"],
+        "answer": "I can barely open my jaw more than an inch. My jaw muscles feel completely locked."
+      },
+      {
+        "keywords": ["voice", "speak", "sound", "muffled", "potato"],
+        "answer": "(Speaks with muffled 'hot potato' resonance) Everyone tells me my voice sounds like I'm holding hot food in my mouth."
+      },
+      {
+        "keywords": ["ear", "radiate", "side", "headache"],
+        "answer": "Yes, whenever I try to swallow, intense pain shoots directly into my right ear."
+      }
+    ],
+    "physicalExam": {
+      "pupilReflex": {
+        "finding": "PERRLA. Examination of oropharynx reveals massive right tonsillar bulge with contralateral uvular deviation to the left.",
+        "normal": true
+      },
+      "palpation": {
+        "finding": "Severe trismus (interincisal distance <2 cm). Tender, enlarged right anterior cervical lymphadenopathy.",
+        "sign": "Uvular Deviation & Trismus"
+      },
+      "chestAuscultation": "Normal vesicular breath sounds, no inspiratory stridor."
+    },
+    "sourceCitation": {
+      "title": "Peritonsillar Abscess: Emergency Drainage and Care",
+      "organization": "NCBI Bookshelf / National Institutes of Health",
+      "year": 2024,
+      "sourceUrl": "https://www.ncbi.nlm.nih.gov/books/NBK519520/"
+    },
+    "defaultResponse": "(Muffled speech) Doctor, my right throat is swollen shut... I can't even swallow my own spit."
+  },
+  {
+    "id": "ent-2",
+    "category": "ENT",
+    "title": "Benign Paroxysmal Positional Vertigo (BPPV)",
+    "patientName": "Meenakshi Sundaram",
+    "age": 58,
+    "gender": "Female",
+    "occupation": "Accountant",
+    "chiefComplaint": "The entire room spins violently for 30 seconds whenever I turn my head over in bed to the right.",
+    "vitals": {
+      "bp": "134/86 mmHg",
+      "heartRate": "76 bpm",
+      "respRate": "16 /min",
+      "temp": "36.7 °C",
+      "spo2": "99%"
+    },
+    "trueDiagnosis": "Benign Paroxysmal Positional Vertigo (BPPV)",
+    "allowedDiagnoses": ["BPPV", "Benign Paroxysmal Positional Vertigo", "Posterior Canal BPPV", "Positional Vertigo"],
+    "differentials": [
+      "Vestibular Neuritis / Labyrinthitis",
+      "Meniere's Disease",
+      "Cerebellar Stroke / TIA",
+      "Vestibular Migraine"
+    ],
+    "urgentOrders": [
+      "Dix-Hallpike Diagnostic Maneuver (Assess torsional nystagmus)",
+      "Epley Canalith Repositioning Maneuver",
+      "Assess HINTS exam to rule out central cerebellar stroke",
+      "Patient Fall Precautions Education"
+    ],
+    "goldenQuestions": [
+      {
+        "keywords": ["how long", "duration", "seconds", "minutes", "hours"],
+        "answer": "The intense spinning lasts only about 20 to 30 seconds, then calms down as long as I keep my head perfectly still."
+      },
+      {
+        "keywords": ["movement", "turn", "head", "bed", "roll", "position"],
+        "answer": "It happens exclusively when I roll over onto my right side in bed or tilt my head up to look at a high shelf."
+      },
+      {
+        "keywords": ["hearing", "ear", "ringing", "tinnitus", "deaf"],
+        "answer": "No hearing loss, no ringing, and no ear fullness whatsoever."
+      },
+      {
+        "keywords": ["weakness", "numbness", "speech", "balance", "face"],
+        "answer": "No facial drooping, no arm weakness, and no slurred speech."
+      }
+    ],
+    "physicalExam": {
+      "pupilReflex": {
+        "finding": "Dix-Hallpike maneuver on right side elicits classic torsional upbeating nystagmus after a 4-second latency, resolving within 25 seconds.",
+        "normal": true
+      },
+      "palpation": {
+        "finding": "Normal cranial nerves II-XII. No cerebellar dysmetria on finger-to-nose testing.",
+        "sign": "Positive Right Dix-Hallpike Torsional Nystagmus"
+      },
+      "chestAuscultation": "Normal cardiac and respiratory sounds."
+    },
+    "sourceCitation": {
+      "title": "Benign Paroxysmal Positional Vertigo Assessment & Epley Maneuver",
+      "organization": "NCBI Bookshelf / National Institutes of Health",
+      "year": 2024,
+      "sourceUrl": "https://www.ncbi.nlm.nih.gov/books/NBK470308/"
+    },
+    "defaultResponse": "When I turn my head, doctor, the walls and ceiling spin around me uncontrollably."
+  },
+  {
+    "id": "ent-3",
+    "category": "ENT",
+    "title": "Acute Mastoiditis",
+    "patientName": "Rohan Das",
+    "age": 19,
+    "gender": "Male",
+    "occupation": "Engineering Student",
+    "chiefComplaint": "Throbbing ear agony, high fever, and my ear is visibly sticking outwards with red swelling behind it.",
+    "vitals": {
+      "bp": "120/78 mmHg",
+      "heartRate": "106 bpm",
+      "respRate": "18 /min",
+      "temp": "39.2 °C (102.6 °F)",
+      "spo2": "99%"
+    },
+    "trueDiagnosis": "Acute Mastoiditis complicating Otitis Media",
+    "allowedDiagnoses": ["Acute Mastoiditis", "Mastoiditis", "Suppurative Mastoiditis"],
+    "differentials": [
+      "Uncomplicated Acute Otitis Media",
+      "Postauricular Lymphadenitis",
+      "Severe Otitis Externa (Swimmer's Ear)",
+      "Parotid Abscess"
+    ],
+    "urgentOrders": [
+      "Contrast-Enhanced High-Resolution CT of Temporal Bones",
+      "Urgent ENT Surgical Consultation for Myringotomy / Tympanocentesis",
+      "Immediate High-Dose IV Ceftriaxone + Vancomycin",
+      "Middle Ear Fluid Culture & Sensitivity"
+    ],
+    "goldenQuestions": [
+      {
+        "keywords": ["behind", "ear", "bone", "swelling", "red", "bump"],
+        "answer": "The bone right behind my left ear is red, hot, swollen, and feels like a throbbing toothache."
+      },
+      {
+        "keywords": ["earache", "cold", "infection", "otitis", "antibiotics", "week"],
+        "answer": "I had a severe middle ear infection 10 days ago. I took antibiotics for only 3 days and stopped when it felt slightly better."
+      },
+      {
+        "keywords": ["drainage", "discharge", "pus", "fluid", "leak"],
+        "answer": "Pus has been intermittently oozing out of my left ear canal."
+      },
+      {
+        "keywords": ["hearing", "muffled", "deaf"],
+        "answer": "My left ear hearing is completely muffled and feels clogged with water."
+      }
+    ],
+    "physicalExam": {
+      "pupilReflex": {
+        "finding": "PERRLA. Examination behind left ear shows postauricular erythema, loss of retroauricular crease, and anterior displacement of auricle.",
+        "normal": true
+      },
+      "palpation": {
+        "finding": "Intense tenderness and boggy fluctuation over the left mastoid process. Otoscopy reveals bulging, erythematous left tympanic membrane with purulent otorrhea.",
+        "sign": "Postauricular Swelling with Auricular Protrusion"
+      },
+      "chestAuscultation": "Lungs clear bilaterally, febrile tachycardia present."
+    },
+    "sourceCitation": {
+      "title": "Mastoiditis: Diagnosis and Surgical Intervention Protocols",
+      "organization": "NCBI Bookshelf / National Institutes of Health",
+      "year": 2024,
+      "sourceUrl": "https://www.ncbi.nlm.nih.gov/books/NBK544332/"
+    },
+    "defaultResponse": "The bone behind my left ear is throbbing with pain, and my ear is visibly sticking forward."
+  },
+  {
+    "id": "ent-4",
+    "category": "ENT",
+    "title": "Acute Adult Epiglottitis (Airway Emergency)",
+    "patientName": "Suresh Pillai",
+    "age": 48,
+    "gender": "Male",
+    "occupation": "Bank Security Officer",
+    "chiefComplaint": "Rapidly worsening severe throat pain, inability to swallow saliva, and leaning forward in a tripod position to breathe.",
+    "vitals": {
+      "bp": "142/90 mmHg",
+      "heartRate": "116 bpm",
+      "respRate": "26 /min",
+      "temp": "38.7 °C",
+      "spo2": "92% on room air"
+    },
+    "trueDiagnosis": "Acute Epiglottitis",
+    "allowedDiagnoses": ["Acute Epiglottitis", "Epiglottitis", "Supraglottitis"],
+    "differentials": [
+      "Peritonsillar Abscess",
+      "Retropharyngeal Abscess",
+      "Laryngitis / Croup",
+      "Foreign Body Aspiration"
+    ],
+    "urgentOrders": [
+      "IMMEDIATE AIRWAY PREPARATION: Anesthesia & ENT on standby for fiberoptic intubation / cricothyroidotomy",
+      "DO NOT perform forceful tongue depressor exam",
+      "Urgent Portable Lateral Soft Tissue Neck Radiograph ('Thumbprint sign')",
+      "IV Ceftriaxone 2g + IV Dexamethasone 10mg"
+    ],
+    "goldenQuestions": [
+      {
+        "keywords": ["swallow", "saliva", "spit", "drooling", "throat"],
+        "answer": "Swallowing feels like swallowing razor blades. I am drooling into a cup because I can't swallow my spit."
+      },
+      {
+        "keywords": ["breathe", "breathing", "tripod", "forward", "posture"],
+        "answer": "I have to lean forward with my hands on my knees to keep my airway open. Lying back makes me feel like I am choking to death."
+      },
+      {
+        "keywords": ["voice", "sound", "stridor", "cough"],
+        "answer": "My voice is muffled and hoarse, and every breath produces a quiet raspy wheeze."
+      },
+      {
+        "keywords": ["onset", "rapid", "hours", "start"],
+        "answer": "It developed frighteningly fast—I was completely healthy this morning and by 3 PM I was gasping."
+      }
+    ],
+    "physicalExam": {
+      "pupilReflex": {
+        "finding": "PERRLA. Patient is in acute distress in 'tripod' posture (sitting upright, leaning forward, neck hyperextended, drooling).",
+        "normal": true
+      },
+      "palpation": {
+        "finding": "Gentle palpation of larynx/hyoid elicits marked tenderness. Pharynx appears deceptively normal on gentle inspection (infection is supraglottic).",
+        "sign": "Tripod Posture & Pain Out of Proportion to Pharyngeal Exam"
+      },
+      "chestAuscultation": "Inspiratory stridor audible over anterior neck with tachypnea."
+    },
+    "sourceCitation": {
+      "title": "Epiglottitis: Emergency Airway Management Guidelines",
+      "organization": "NCBI Bookshelf / National Institutes of Health",
+      "year": 2024,
+      "sourceUrl": "https://www.ncbi.nlm.nih.gov/books/NBK430960/"
+    },
+    "defaultResponse": "(Struggling to speak) Throat... on fire... can't swallow... airway closing..."
+  },
+  {
+    "id": "ent-5",
+    "category": "ENT",
+    "title": "Sudden Sensorineural Hearing Loss (SSNHL)",
+    "patientName": "Deepa Joshi",
+    "age": 36,
+    "gender": "Female",
+    "occupation": "Software Project Lead",
+    "chiefComplaint": "I woke up this morning and my right ear was suddenly 90% deaf with loud ringing, like someone flipped an audio switch.",
+    "vitals": {
+      "bp": "118/76 mmHg",
+      "heartRate": "74 bpm",
+      "respRate": "16 /min",
+      "temp": "36.6 °C",
+      "spo2": "99%"
+    },
+    "trueDiagnosis": "Idiopathic Sudden Sensorineural Hearing Loss (SSNHL)",
+    "allowedDiagnoses": ["Sudden Sensorineural Hearing Loss", "SSNHL", "Sudden Hearing Loss", "Idiopathic Sudden Sensorineural Hearing Loss"],
+    "differentials": [
+      "Cerumen Impaction (Earwax blockage)",
+      "Eustachian Tube Dysfunction",
+      "Meniere's Disease",
+      "Acoustic Neuroma (Vestibular Schwannoma)"
+    ],
+    "urgentOrders": [
+      "Emergent Pure Tone Audiometry (PTA within 24 hours)",
+      "High-Dose Oral Prednisolone (60 mg/day taper) within 72 hours",
+      "Otoscopic Exam (Exclude cerumen or middle ear effusion)",
+      "Gadolinium-Enhanced MRI of Brain & Internal Auditory Canal"
+    ],
+    "goldenQuestions": [
+      {
+        "keywords": ["when", "wake", "sudden", "how fast", "morning"],
+        "answer": "It happened overnight. I woke up at 6:30 AM, picked up my phone, put it to my right ear, and heard complete dead static."
+      },
+      {
+        "keywords": ["ringing", "tinnitus", "buzzing", "sound"],
+        "answer": "Yes! There is a high-pitched loud buzzing ringing noise constantly screaming in that ear."
+      },
+      {
+        "keywords": ["dizzy", "spinning", "vertigo", "balance"],
+        "answer": "Mild unsteadiness when walking, but no spinning vertigo."
+      },
+      {
+        "keywords": ["wax", "pain", "discharge", "leak", "cold"],
+        "answer": "No pain, no ear discharge, and no earwax history. The ear canal feels completely empty but deaf."
+      }
+    ],
+    "physicalExam": {
+      "pupilReflex": {
+        "finding": "PERRLA. Normal ocular and facial symmetry. Cranial nerves VII normal.",
+        "normal": true
+      },
+      "palpation": {
+        "finding": "Otoscopy shows completely clear, pearly grey tympanic membrane bilaterally. Weber tuning fork test (512 Hz) lateralizes to the normal left ear. Rinne test positive (AC > BC bilaterally).",
+        "sign": "Weber Lateralization to Normal Ear (Sensorineural Pattern)"
+      },
+      "chestAuscultation": "Normal heart and lung sounds."
+    },
+    "sourceCitation": {
+      "title": "Sudden Sensorineural Hearing Loss Practice Guideline",
+      "organization": "NCBI Bookshelf / National Institutes of Health",
+      "year": 2024,
+      "sourceUrl": "https://www.ncbi.nlm.nih.gov/books/NBK448109/"
+    },
+    "defaultResponse": "Doctor, my right ear went almost completely deaf overnight and has a loud high-pitched buzz."
   }
 ]
