@@ -74,9 +74,11 @@ export default function App() {
   const [modelName, setModelName] = useState(() => 
     localStorage.getItem('clinosce_model_name') || DEFAULT_MODEL
   );
-  const [engineMode, setEngineMode] = useState(() => 
-    localStorage.getItem('clinosce_engine_mode') || 'nemotron'
-  );
+  const [engineMode, setEngineMode] = useState(() => {
+    const saved = localStorage.getItem('clinosce_engine_mode');
+    // Ensure existing visitors are upgraded to live Nemotron by default
+    return (saved && saved !== 'offline') ? saved : 'nemotron';
+  });
   const [testStatus, setTestStatus] = useState(null); // null | 'testing' | 'success' | 'error'
   const [testMessage, setTestMessage] = useState('');
 
@@ -271,6 +273,15 @@ export default function App() {
   const getContextualPatientReply = (query, currentCase, dialogueHistory = []) => {
     const q = query.toLowerCase().trim();
 
+    // 0. Doctor Direct Diagnosis, Urgency, or Doctor Advice
+    if (q.includes('heart attack') || q.includes('heatattack') || q.includes('infarct') || q.includes('cardiac arrest') || q.includes('dying') || q.includes('die')) {
+      return `A heart attack?! Oh god, doctor, please help me! Don't let me die! The pressure in my chest is unbearable... what are you going to do?!`;
+    }
+
+    if (q.includes('consult') || q.includes('other doctor') || q.includes('specialist')) {
+      return `Doctor, you are my doctor right now! I'm in your emergency room, please examine me and help me!`;
+    }
+
     // 1. Identity & Name
     if (q.includes('name') || q.includes('who are you') || q.includes('who r u') || q.includes('whats ur') || q.includes('whats u r') || q.includes('your identity')) {
       return `My name is ${currentCase.patientName}, doctor. Thank you for seeing me so urgently.`;
@@ -366,10 +377,10 @@ export default function App() {
       return `Yes, I feel clammy and uneasy all over.`;
     }
 
-    // 13. Swallowing & Drooling
-    if (q.includes('swallow') || q.includes('saliva') || q.includes('spit') || q.includes('drool') || q.includes('eat') || q.includes('drink')) {
+    // 13. Swallowing & Drooling (Clean whole-word boundary for eat/drink)
+    if (q.includes('swallow') || q.includes('saliva') || q.includes('spit') || q.includes('drool') || /\beat\b/.test(q) || /\bdrink\b/.test(q)) {
       if (currentCase.id === 'ent-1' || currentCase.id === 'ent-4') return `I can't swallow at all, not even a drop of saliva. I am drooling into a cup because the pain is unbearable.`;
-      return `Swallowing is uncomfortable with all this distress, doctor.`;
+      return `Swallowing is fine, doctor, it's the pressure in my chest that's unbearable.`;
     }
 
     // 14. Dizziness & Vertigo
@@ -424,7 +435,7 @@ export default function App() {
     }
 
     // 21. Habits (Smoking, Alcohol, Coffee)
-    if (q.includes('smoke') || q.includes('tobacco') || q.includes('cigarette') || q.includes('alcohol') || q.includes('drink') || q.includes('coffee') || q.includes('caffeine')) {
+    if (q.includes('smoke') || q.includes('tobacco') || q.includes('cigarette') || q.includes('alcohol') || /\bdrink\b/.test(q) || q.includes('coffee') || q.includes('caffeine')) {
       if (currentCase.id === 'cardio-1') return `I smoke about a pack of cigarettes a day and have for 25 years. I rarely drink alcohol.`;
       if (currentCase.id === 'cardio-4') return `I don't smoke or drink, but I had 3 large cups of strong coffee this morning while pulling an all-nighter.`;
       return `I don't smoke cigarettes, and I drink very little alcohol.`;
@@ -472,68 +483,75 @@ export default function App() {
 
     // --- STEP 1: RAG Context Retrieval ---
     const ragContext = retrieveClinicalContext(query, selectedCaseId);
-
-    // --- STEP 2: Match against Golden Questions ---
     const lowerQuery = query.toLowerCase();
-    let matchedAnswer = null;
 
+    // Check golden question scoring keywords (ticks up the History Taking score!)
     currentCase.goldenQuestions.forEach((gq, idx) => {
       const hasMatch = gq.keywords.some(k => lowerQuery.includes(k));
       if (hasMatch) {
-        matchedAnswer = gq.answer;
         setAskedKeywords(prev => new Set(prev).add(idx));
       }
     });
 
-    // --- STEP 3: Live Nemotron Cloud Generation OR Smart Local Engine ---
+    let matchedAnswer = null;
     let isFromNemotron = false;
 
-    if (!matchedAnswer) {
-      if (engineMode === 'nemotron' && apiKey) {
-        try {
-          const res = await fetch('/api/chat', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              apiKey: apiKey,
-              model: modelName || DEFAULT_MODEL,
-              endpoint: apiEndpoint,
-              messages: [
-                {
-                  role: 'system',
-                  content: `You are roleplaying as the patient ${currentCase.patientName}, a ${currentCase.age}-year-old ${currentCase.gender} (${currentCase.occupation}).
-Condition: ${currentCase.title}.
-Chief Complaint: "${currentCase.chiefComplaint}".
+    // --- STEP 2: Live Nemotron Ultra Cloud Generation ---
+    if (engineMode === 'nemotron' && apiKey) {
+      try {
+        const res = await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            apiKey: apiKey,
+            model: modelName || DEFAULT_MODEL,
+            endpoint: apiEndpoint,
+            messages: [
+              {
+                role: 'system',
+                content: `You are roleplaying as the patient ${currentCase.patientName}, a ${currentCase.age}-year-old ${currentCase.gender} (${currentCase.occupation}).
+Current Medical Condition: ${currentCase.title}.
+Your Chief Complaint: "${currentCase.chiefComplaint}".
 Current Vitals: BP ${currentCase.vitals.bp}, HR ${currentCase.vitals.heartRate}, RR ${currentCase.vitals.respRate}, Temp ${currentCase.vitals.temp}, SpO2 ${currentCase.vitals.spo2}.
 Physical Exam: ${JSON.stringify(currentCase.physicalExam)}.
 Grounded Clinical RAG Context: ${ragContext ? ragContext.retrievedText : currentCase.title}.
 STRICT RULES:
-1. You are the PATIENT, NOT an AI or a doctor. Talk in first-person ("I feel...", "My...").
-2. Answer in 1-2 realistic, authentic sentences.
-3. If asked your name, answer "${currentCase.patientName}".
-4. Never break character. Never state your diagnosis directly.`
-                },
-                ...dialogue.slice(-3).map(d => ({
-                  role: d.sender === 'doctor' ? 'user' : 'assistant',
-                  content: d.text
-                })),
-                { role: 'user', content: query }
-              ]
-            })
-          });
-          const data = await res.json();
-          if (res.ok && data.choices?.[0]?.message?.content) {
-            matchedAnswer = data.choices[0].message.content.trim();
-            isFromNemotron = true;
-          } else {
-            console.warn('Nemotron call fallback to local engine:', data.error);
-            matchedAnswer = getContextualPatientReply(query, currentCase, dialogue);
-          }
-        } catch (e) {
-          console.error('Nemotron fetch error:', e);
-          matchedAnswer = getContextualPatientReply(query, currentCase, dialogue);
+1. You are the PATIENT in the emergency room talking to your doctor. You are NOT an AI assistant or a doctor.
+2. Respond in first-person ("I feel...", "My chest..."). Speak authentically in pain, distress, or fear.
+3. If the doctor tells you your diagnosis (e.g. "you are having a heart attack"), react with realistic panic/fear ("A heart attack?! Doctor, please save me!").
+4. If asked your name, answer "${currentCase.patientName}".
+5. Answer in 1-2 realistic, concise sentences. Never break character.`
+              },
+              ...dialogue.slice(-4).map(d => ({
+                role: d.sender === 'doctor' ? 'user' : 'assistant',
+                content: d.text
+              })),
+              { role: 'user', content: query }
+            ]
+          })
+        });
+        const data = await res.json();
+        if (res.ok && data.choices?.[0]?.message?.content) {
+          matchedAnswer = data.choices[0].message.content.trim();
+          isFromNemotron = true;
+        } else {
+          console.warn('Nemotron call fallback to local engine:', data.error);
         }
-      } else {
+      } catch (e) {
+        console.error('Nemotron fetch error:', e);
+      }
+    }
+
+    // --- STEP 3: Fallback to Local Grounded Engine if Offline or Errored ---
+    if (!matchedAnswer) {
+      currentCase.goldenQuestions.forEach((gq, idx) => {
+        const hasMatch = gq.keywords.some(k => lowerQuery.includes(k));
+        if (hasMatch && !matchedAnswer) {
+          matchedAnswer = gq.answer;
+        }
+      });
+
+      if (!matchedAnswer) {
         matchedAnswer = getContextualPatientReply(query, currentCase, dialogue);
       }
     }
