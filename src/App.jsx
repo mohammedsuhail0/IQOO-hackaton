@@ -100,6 +100,7 @@ PATIENT BACKGROUND & SITUATION:
 - Condition: ${c.title}
 - What you are experiencing: You are in acute discomfort and distress.
 - Vitals: BP ${c.vitals.bp}, HR ${c.vitals.heartRate}, SpO2 ${c.vitals.spo2}.
+- Physical exam findings if doctor checks, listens with stethoscope, or examines: "${c.physicalExam?.palpation?.finding || 'No acute focal swelling; visibly uncomfortable.'}"
 
 GUIDELINES FOR NATURAL, UN-OVERFITTED CONVERSATION:
 1. ANSWER ONLY WHAT IS ASKED: Answer the doctor's specific question directly in 1 to 2 concise, natural sentences. Never dump multiple symptoms or volunteer info that wasn't asked.
@@ -175,6 +176,23 @@ export default function App() {
 
     const utterance = new SpeechSynthesisUtterance(clean);
     utterance.lang = 'en-US';
+
+    // Find natural gender-appropriate voice if available in browser
+    try {
+      const voices = window.speechSynthesis.getVoices();
+      if (voices && voices.length > 0) {
+        const isFemale = currentCase.gender === 'Female';
+        const matchedVoice = voices.find(v => 
+          v.lang.startsWith('en') && 
+          (isFemale 
+            ? /female|woman|zira|samantha|karen|victoria|moira|fiona|jenny/i.test(v.name)
+            : /male|man|david|george|alex|daniel|fred|guy/i.test(v.name))
+        ) || voices.find(v => v.lang.startsWith('en')) || voices[0];
+        if (matchedVoice) utterance.voice = matchedVoice;
+      }
+    } catch (e) {
+      // Graceful fallback to default system voice
+    }
 
     // Set natural pitch and pacing based on patient demographics
     if (currentCase.age >= 60) {
@@ -342,8 +360,72 @@ export default function App() {
       return `No other pain doctor, just the primary agony I described earlier.`;
     }
 
-    // Doctor asks to examine / check
-    if (q.includes('check') || q.includes('examine') || q.includes('look') || q.includes('listen') || q.includes('stethoscope') || q.includes('touch') || q.includes('feel')) {
+    // Stethoscope Auscultation (Heart / Lungs)
+    if (q.includes('stethoscope') || q.includes('listen') || q.includes('breath sound') || q.includes('lung sound') || q.includes('heart sound') || q.includes('murmur') || q.includes('auscultat') || q.includes('sound')) {
+      if (currentCase.id === 'cardio-1') {
+        return "As you place your stethoscope on my chest, you hear a soft S4 gallop over my heart apex, and my lung fields sound clear.";
+      }
+      if (currentCase.id === 'cardio-2') {
+        return "You listen to my lungs: there are coarse wet bubbling crackles across both lung bases, and my neck veins are clearly engorged.";
+      }
+      if (currentCase.id === 'cardio-3') {
+        return "With your stethoscope against my lower breastbone, you hear a distinct scratching, leathery friction rub that gets louder when I lean forward.";
+      }
+      if (currentCase.id === 'cardio-4') {
+        return "My heart rate is galloping at nearly 200 beats per minute, regular but impossibly rapid to count by ear.";
+      }
+      if (currentCase.id === 'cardio-5') {
+        return "You hear a distinct harsh regurgitant murmur over my mitral area.";
+      }
+      if (currentCase.id === 'ent-4') {
+        return "You can hear high-pitched harsh stridor with every breath I draw in, even without putting your stethoscope on my neck.";
+      }
+      return "You listen to my chest with your stethoscope. Everything feels tight and labored, doctor.";
+    }
+
+    // Mouth / Throat inspection & Tongue Depressor
+    if (q.includes('open your mouth') || q.includes('open mouth') || q.includes('throat') || q.includes('tongue depressor') || q.includes('tonsil') || q.includes('uvula')) {
+      if (currentCase.id === 'ent-1') {
+        return "I can barely open my teeth wider than a finger width because of the muscle spasm. You shine your light and see my right tonsil huge, inflamed, and pushing my uvula way to the left side.";
+      }
+      if (currentCase.id === 'ent-4') {
+        return "Please don't put a wooden stick down my throat, doctor! It feels like my airway will clamp shut! I can only breathe sitting up and leaning forward.";
+      }
+      return "I open my mouth for you as best as I can, doctor.";
+    }
+
+    // Ear & Mastoid inspection & Tuning Fork
+    if (q.includes('ear') || q.includes('mastoid') || q.includes('otoscope') || q.includes('behind your ear') || q.includes('tuning fork') || q.includes('weber') || q.includes('rinne')) {
+      if (currentCase.id === 'ent-3') {
+        return "Ow! Touching behind my left ear is agonizing — the bone is red, swollen, and has pushed my whole ear forward.";
+      }
+      if (currentCase.id === 'ent-5') {
+        return "You inspect with your otoscope: my eardrum looks pearly and intact. When you strike the tuning fork, I only hear it vibrating in my left ear, nothing in my right!";
+      }
+      return "You examine my ear with your light. What does it look like, doctor?";
+    }
+
+    // Dix-Hallpike Maneuver & Vertigo test
+    if (q.includes('dix-hallpike') || q.includes('hallpike') || q.includes('head turn') || q.includes('maneuver') || q.includes('nystagmus') || q.includes('lie back')) {
+      if (currentCase.id === 'ent-2') {
+        return "You quickly lay me back and turn my head 45 degrees to the right: after about 5 seconds, the room violently starts spinning and you can see my eyes jerking in a rapid upward twist!";
+      }
+      return "I follow your instructions and move my head as you guide me, doctor.";
+    }
+
+    // Leg & Ankle Swelling (Pitting Edema)
+    if (q.includes('swell') || q.includes('edema') || q.includes('ankle') || q.includes('feet') || q.includes('shin') || q.includes('pitting')) {
+      if (currentCase.id === 'cardio-2') {
+        return "When you press your fingers into my shins, it leaves deep pits that take several seconds to bounce back. Both ankles are swollen up to my mid-calves.";
+      }
+      if (currentCase.id === 'cardio-1') {
+        return "No swelling in my legs doctor, but my feet and hands are completely cold and drenched in sweat.";
+      }
+      return "No swelling in my legs, doctor.";
+    }
+
+    // Generic examination request
+    if (q.includes('check') || q.includes('examine') || q.includes('touch') || q.includes('feel')) {
       return `Yes doctor, please check whatever you need! I'll hold as still as I can, just please tell me what is happening to me.`;
     }
 
