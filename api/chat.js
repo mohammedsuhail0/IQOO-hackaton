@@ -18,66 +18,92 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { model, messages, apiKey, endpoint } = req.body || {};
+    const { model, messages, apiKey } = req.body || {};
     
-    // Use user-provided key, environment key, or the authenticated Nemotron Ultra key
-    const key = apiKey || process.env.NVIDIA_API_KEY || process.env.VITE_NVIDIA_API_KEY || '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';
-
-    const targetUrl = endpoint || 'https://integrate.api.nvidia.com/v1/chat/completions';
-    const primaryModel = model || 'nvidia/nemotron-3-ultra-550b-a55b';
-    const fallbackModel = 'deepseek-ai/deepseek-v4-flash-0731';
+    // Use environment variables or client-provided key
+    const groqKey = apiKey || process.env.GROQ_API_KEY;
+    const nvidiaKey = process.env.NVIDIA_API_KEY;
 
     let data = null;
     let status = 200;
 
-    // Try primary model with 250 max tokens for low latency
+    // 1. Try Groq Primary Model (qwen/qwen3.8-27b - Ultra-fast ~300ms)
     try {
-      const response = await fetch(targetUrl, {
+      const groqResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${key}`
+          'Authorization': `Bearer ${groqKey}`
         },
         body: JSON.stringify({
-          model: primaryModel,
+          model: model || 'qwen/qwen3.8-27b',
           messages: messages || [],
           temperature: 0.7,
-          max_tokens: 250
+          max_tokens: 180
         })
       });
 
-      status = response.status;
-      data = await response.json();
-    } catch (fetchErr) {
-      console.warn('Primary model request failed, trying fallback:', fetchErr);
+      if (groqResponse.ok) {
+        data = await groqResponse.json();
+        status = groqResponse.status;
+      }
+    } catch (groqErr) {
+      console.warn('Groq primary failed, trying secondary:', groqErr);
     }
 
-    // If primary failed or returned error, try fallback model
-    if (!data?.choices?.[0]?.message?.content && primaryModel !== fallbackModel) {
+    // 2. Try Groq Secondary Model (groq/compound)
+    if (!data?.choices?.[0]?.message?.content) {
       try {
-        const fbResponse = await fetch(targetUrl, {
+        const groqSecondary = await fetch('https://api.groq.com/openai/v1/chat/completions', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${key}`
+            'Authorization': `Bearer ${groqKey}`
           },
           body: JSON.stringify({
-            model: fallbackModel,
+            model: 'groq/compound',
             messages: messages || [],
             temperature: 0.7,
-            max_tokens: 200
+            max_tokens: 180
           })
         });
-        if (fbResponse.ok) {
-          data = await fbResponse.json();
-          status = fbResponse.status;
+
+        if (groqSecondary.ok) {
+          data = await groqSecondary.json();
+          status = groqSecondary.status;
         }
-      } catch (fbErr) {
-        console.warn('Fallback model also failed:', fbErr);
+      } catch (secErr) {
+        console.warn('Groq secondary failed:', secErr);
       }
     }
 
-    // Clean up content (strip <think> tags, meta-reasoning, outer quotes)
+    // 3. Fallback to NVIDIA API if Groq fails
+    if (!data?.choices?.[0]?.message?.content) {
+      try {
+        const nvResponse = await fetch('https://integrate.api.nvidia.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${nvidiaKey}`
+          },
+          body: JSON.stringify({
+            model: 'nvidia/nemotron-3.5-lightning-30b-a3b',
+            messages: messages || [],
+            temperature: 0.7,
+            max_tokens: 180
+          })
+        });
+
+        if (nvResponse.ok) {
+          data = await nvResponse.json();
+          status = nvResponse.status;
+        }
+      } catch (nvErr) {
+        console.warn('NVIDIA fallback failed:', nvErr);
+      }
+    }
+
+    // Clean up content (strip <think> tags, outer quotes)
     if (data?.choices?.[0]?.message) {
       let content = data.choices[0].message.content || '';
       content = content.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
@@ -90,7 +116,7 @@ export default async function handler(req, res) {
 
     return res.status(status).json(data);
   } catch (err) {
-    console.error('Nemotron proxy error:', err);
+    console.error('Chat API proxy error:', err);
     return res.status(500).json({ error: err.message });
   }
 }

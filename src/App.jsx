@@ -601,7 +601,7 @@ export default function App() {
               </div>
               <p className="text-[10px] text-emerald-400 font-medium flex items-center gap-1 truncate">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                <span>Nemotron 550B • NCBI RAG</span>
+                <span>Groq Ultra-Fast (300ms) • NCBI RAG</span>
               </p>
             </div>
           </div>
