@@ -312,8 +312,24 @@ export function detectSurrenderPhrase(rawText) {
 export function detectInChatDiagnosis(rawText, currentCase) {
   if (!rawText) return null;
 
-  // Normalize: handle common shorthand e.g. "u r", "ur", "u have", typos like "haing", "heatattack"
-  let clean = rawText.toLowerCase()
+  const trimmed = rawText.trim();
+  const lower = trimmed.toLowerCase();
+
+  // 1. Inquiries about family history, past medical history, or general questions -> NEVER a diagnosis disclosure
+  const isQuestion = trimmed.includes('?') || 
+    /^(do you|did you|have you|has anyone|can you|could you|would you|is there|are there|tell me if|any|what|why|how|when|where|who)\b/i.test(trimmed);
+
+  const isHistoryOrFamilyInquiry = /\b(history|family|relatives|parents|father|mother|brother|sister|before|prior|previous|past|ever|years ago|months ago|first time)\b/i.test(trimmed);
+
+  // If asking a question or inquiring about past/family, only allow if explicit formal diagnosis declaration is present
+  const hasExplicitDoctorDeclaration = /^(my diagnosis is|i diagnose you with|i believe your diagnosis is|official diagnosis is)\b/i.test(trimmed);
+
+  if ((isQuestion || isHistoryOrFamilyInquiry) && !hasExplicitDoctorDeclaration) {
+    return null;
+  }
+
+  // 2. Normalize: handle common shorthand e.g. "u r", "ur", "u have", typos like "haing", "heatattack"
+  let clean = lower
     .replace(/\bu r\b/g, "you are")
     .replace(/\bur\b/g, "your")
     .replace(/\bu have\b/g, "you have")
@@ -328,48 +344,27 @@ export function detectInChatDiagnosis(rawText, currentCase) {
     .replace(/\s+/g, " ")
     .trim();
 
-  // Diagnostic disclosure phrases
-  const disclosurePrefixes = [
-    "you are getting an",
-    "you are getting a",
-    "you are having an",
-    "you are having a",
-    "you are having",
-    "you have an",
-    "you have a",
-    "you have",
-    "you are suffering from",
-    "i diagnose you with",
-    "i diagnose",
-    "my diagnosis is",
-    "it is an",
-    "it is a",
-    "it's an",
-    "it's a",
-    "i think you have",
-    "i think it is",
-    "i think it's",
-    "i suspect you have",
-    "looks like you have",
-    "seems like you have"
+  // 3. Affirmative diagnostic declaration prefixes
+  const statementPrefixes = [
+    /^(?:you are|you're)\s+(?:having|getting|suffering from)\b/i,
+    /^(?:you have|you've got)\b/i,
+    /^(?:i diagnose you with|i diagnose|my diagnosis is)\b/i,
+    /^(?:this is|it is|it's|looks like|seems like|i think you have|i suspect you have|i believe you have)\b/i,
+    /^(?:diagnosis|impression|assessment)\s*:\s*/i
   ];
 
-  const hasDisclosurePrefix = disclosurePrefixes.some(prefix => clean.includes(prefix));
-
-  // Disqualify if it's an inquiry about past medical history or general question unless prefixed with diagnosis intent
-  const isPastHistoryOrGeneralQuestion = /\b(history of|in the past|before|prior to this|have you ever|did you ever|family history|anyone in your family|any history)\b/i.test(rawText);
-  if (isPastHistoryOrGeneralQuestion && !hasDisclosurePrefix) {
-    return null;
-  }
+  const hasStatementPrefix = statementPrefixes.some(rx => rx.test(clean));
 
   // Check against all conditions in the catalog
   for (const item of MEDICAL_CONDITIONS_CATALOG) {
     for (const kw of item.keywords) {
       const kwRegex = new RegExp(`\\b${kw}\\b`, 'i');
       if (kwRegex.test(clean)) {
-        // If it has a disclosure prefix, or if the whole message is predominantly naming the condition
-        const isPredominantMatch = clean.length <= kw.length + 30;
-        if (hasDisclosurePrefix || isPredominantMatch) {
+        // Standalone check: user just typed the disease name (e.g., "heart attack", "STEMI", "asthma")
+        const stripped = clean.replace(/^(?:diagnosis|assessment|impression|case|condition)\s*[:=-]?\s*/i, '').trim();
+        const isExactStandalone = stripped === kw || stripped === `a ${kw}` || stripped === `an ${kw}`;
+
+        if (hasStatementPrefix || isExactStandalone) {
           // Check if this condition matches the current case
           const isCaseMatch = item.caseId === currentCase.id || 
             currentCase.allowedDiagnoses.some(ad => ad.toLowerCase().includes(kw) || kw.includes(ad.toLowerCase()));
@@ -390,7 +385,9 @@ export function detectInChatDiagnosis(rawText, currentCase) {
     const adLower = ad.toLowerCase();
     const adRegex = new RegExp(`\\b${adLower}\\b`, 'i');
     if (adRegex.test(clean)) {
-      if (hasDisclosurePrefix || clean.length <= adLower.length + 15) {
+      const stripped = clean.replace(/^(?:diagnosis|assessment|impression|case|condition)\s*[:=-]?\s*/i, '').trim();
+      const isExactStandalone = stripped === adLower || stripped === `a ${adLower}` || stripped === `an ${adLower}`;
+      if (hasStatementPrefix || isExactStandalone) {
         return {
           isDiagnosis: true,
           extractedDiagnosis: currentCase.trueDiagnosis,
