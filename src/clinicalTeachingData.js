@@ -400,3 +400,203 @@ export function detectInChatDiagnosis(rawText, currentCase) {
 
   return null;
 }
+
+// Bedside Diagnostic Orders, Labs, and Physical Examination Parser
+export const detectBedsideOrderOrExam = (query, currentCase) => {
+  if (!query || !currentCase) return null;
+  const q = query.toLowerCase().trim();
+
+  // 1. 12-Lead ECG / EKG / Rhythm Strip Orders
+  if (
+    q.includes('ecg') || 
+    q.includes('ekg') || 
+    q.includes('electrocardiogram') || 
+    q.includes('12 lead') || 
+    q.includes('12-lead') || 
+    q.includes('heart tracing') || 
+    q.includes('rhythm strip') || 
+    q.includes('cardiac monitor') ||
+    (q.includes('run') && (q.includes('strip') || q.includes('leads') || q.includes('tracing') || q.includes('report')))
+  ) {
+    if (currentCase.id === 'cardio-1') {
+      return "The triage nurse runs the 12-lead ECG immediately: It shows marked ST-segment elevation of 3.5mm in leads II, III, and aVF with reciprocal ST depression in leads I and aVL. Doctor, what does it mean?!";
+    }
+    if (currentCase.id === 'cardio-2') {
+      return "The 12-lead ECG shows sinus tachycardia at 112 bpm with left ventricular hypertrophy and strain pattern. My breathing feels so heavy doctor.";
+    }
+    if (currentCase.id === 'cardio-3') {
+      return "The nurse hands you the 12-lead ECG: Diffuse concave-upward ST-segment elevations across precordial leads with PR depression in lead II. Leaning forward is the only thing easing my chest.";
+    }
+    if (currentCase.id === 'cardio-4') {
+      return "The monitor shows regular narrow-complex tachycardia at 195 bpm with absent P waves. My heart feels like it is pounding right out of my ribs!";
+    }
+    if (currentCase.id === 'cardio-5') {
+      return "The 12-lead ECG shows normal sinus rhythm with first-degree AV block (PR interval 220ms). My fevers and chills have been terrible doctor.";
+    }
+    return "The triage nurse attaches the leads and prints the 12-lead ECG: It shows normal sinus rhythm with no acute ST elevation. What should we do next, doctor?";
+  }
+
+  // 2. Cardiac Enzymes / Troponin / Stat Labs / Blood Tests
+  if (
+    q.includes('troponin') || 
+    q.includes('blood test') || 
+    q.includes('enzymes') || 
+    q.includes('cardiac markers') || 
+    q.includes('bnp') || 
+    q.includes('d-dimer') || 
+    q.includes('stat lab') || 
+    q.includes('draw blood') || 
+    q.includes('blood draw') ||
+    q.includes('chem panel') ||
+    q.includes('labs')
+  ) {
+    if (currentCase.id === 'cardio-1') {
+      return "The stat bedside lab returns: High-sensitivity Cardiac Troponin I is 4.2 ng/mL (critically elevated above normal 0.04). Doctor, please help me with this pressure!";
+    }
+    if (currentCase.id === 'cardio-2') {
+      return "Bedside blood panel: NT-proBNP is critically elevated at 8,450 pg/mL, with BUN 38 and Creatinine 1.6. My breathing is so heavy doctor.";
+    }
+    if (currentCase.id === 'cardio-5') {
+      return "Stat blood panel: ESR is 88 mm/hr and CRP is markedly elevated at 64 mg/L. Blood cultures x3 have been drawn and sent to microbiology.";
+    }
+    return "The nurse draws blood from my vein for the urgent lab panel and sends it stat. Please tell me what you find, doctor.";
+  }
+
+  // 3. Emergency Interventions & Stat Medications
+  if (
+    q.includes('aspirin') || 
+    q.includes('nitro') || 
+    q.includes('oxygen') || 
+    q.includes('lasix') || 
+    q.includes('furosemide') || 
+    q.includes('o2') || 
+    q.includes('spray') || 
+    q.includes('morphine') ||
+    q.includes('adenosine') ||
+    q.includes('valsalva') ||
+    q.includes('vagal')
+  ) {
+    if (q.includes('aspirin')) {
+      return "I chewed and swallowed the 325mg aspirin tablets the nurse gave me. It tasted bitter, but I took it. My chest is still very tight, doctor.";
+    }
+    if (q.includes('oxygen') || q.includes('o2') || q.includes('mask') || q.includes('cannula')) {
+      return "The nurse placed the oxygen mask over my nose and mouth. The air feels cool and helps me take a breath, but the pressure is still there.";
+    }
+    if (q.includes('nitro')) {
+      return "The nurse sprayed the nitroglycerin under my tongue. It tingled and gave me a slight headache, but my chest is still aching.";
+    }
+    if (q.includes('lasix') || q.includes('furosemide')) {
+      return "The nurse pushed the IV medication into my line. I really hope it starts clearing this fluid out of my chest soon.";
+    }
+    if (q.includes('adenosine') || q.includes('valsalva') || q.includes('vagal')) {
+      return "The nurse pushes the rapid IV medicine while I bear down — my heart felt like it stopped for a terrifying second, but it slowed right down!";
+    }
+    return "The nurse administers that right into my IV line. Doctor, is it going to help me recover?";
+  }
+
+  // 4. Stethoscope Auscultation (Heart / Lungs)
+  if (
+    q.includes('stethoscope') || 
+    q.includes('auscultat') || 
+    q.includes('listen to your heart') || 
+    q.includes('listen to heart') || 
+    q.includes('listen to your lungs') || 
+    q.includes('listen to lungs') || 
+    q.includes('listen to your chest') || 
+    q.includes('listen to chest') || 
+    q.includes('heart sound') || 
+    q.includes('lung sound') || 
+    q.includes('breath sound') || 
+    q.includes('murmur') || 
+    q.includes('friction rub')
+  ) {
+    if (currentCase.id === 'cardio-1') {
+      return "As you place your stethoscope on my chest, you hear a soft S4 gallop over my heart apex, and my lung fields sound clear.";
+    }
+    if (currentCase.id === 'cardio-2') {
+      return "You listen to my lungs: there are coarse wet bubbling crackles across both lung bases, and my neck veins are clearly engorged.";
+    }
+    if (currentCase.id === 'cardio-3') {
+      return "With your stethoscope against my lower breastbone, you hear a distinct scratching, leathery friction rub that gets louder when I lean forward.";
+    }
+    if (currentCase.id === 'cardio-4') {
+      return "My heart rate is galloping at nearly 200 beats per minute, regular but impossibly rapid to count by ear.";
+    }
+    if (currentCase.id === 'cardio-5') {
+      return "You hear a distinct harsh regurgitant murmur over my mitral area.";
+    }
+    if (currentCase.id === 'ent-4') {
+      return "You can hear high-pitched harsh stridor with every breath I draw in, even without putting your stethoscope on my neck.";
+    }
+    return "You listen to my chest with your stethoscope. Everything feels tight and labored, doctor.";
+  }
+
+  // 5. Throat / Mouth Inspection & Tongue Depressor
+  if (
+    q.includes('open your mouth') || 
+    q.includes('open mouth') || 
+    q.includes('throat') || 
+    q.includes('tongue depressor') || 
+    q.includes('tonsil') || 
+    q.includes('uvula')
+  ) {
+    if (currentCase.id === 'ent-1') {
+      return "I can barely open my teeth wider than a finger width because of the muscle spasm. You shine your light and see my right tonsil huge, inflamed, and pushing my uvula way to the left side.";
+    }
+    if (currentCase.id === 'ent-4') {
+      return "Please don't put a wooden stick down my throat, doctor! It feels like my airway will clamp shut! I can only breathe sitting up and leaning forward.";
+    }
+    return "I open my mouth for you as best as I can, doctor.";
+  }
+
+  // 6. Ear & Mastoid Inspection & Tuning Fork Tests
+  if (
+    q.includes('otoscope') || 
+    q.includes('mastoid') || 
+    q.includes('behind your ear') || 
+    q.includes('behind ear') || 
+    q.includes('tuning fork') || 
+    q.includes('weber') || 
+    q.includes('rinne')
+  ) {
+    if (currentCase.id === 'ent-3') {
+      return "Ow! Touching behind my left ear is agonizing — the bone is red, swollen, and has pushed my whole ear forward.";
+    }
+    if (currentCase.id === 'ent-5') {
+      return "You inspect with your otoscope: my eardrum looks pearly and intact. When you strike the tuning fork, I only hear it vibrating in my left ear, nothing in my right!";
+    }
+    return "You examine my ear with your light. What does it look like, doctor?";
+  }
+
+  // 7. Dix-Hallpike Maneuver & Positional Vertigo Testing
+  if (
+    q.includes('dix-hallpike') || 
+    q.includes('hallpike') || 
+    q.includes('head turn') || 
+    q.includes('maneuver') || 
+    q.includes('nystagmus')
+  ) {
+    if (currentCase.id === 'ent-2') {
+      return "You quickly lay me back and turn my head 45 degrees to the right: after about 5 seconds, the room violently starts spinning and you can see my eyes jerking in a rapid upward twist!";
+    }
+    return "I follow your instructions and move my head as you guide me, doctor.";
+  }
+
+  // 8. Leg & Ankle Swelling (Pitting Edema)
+  if (
+    q.includes('pitting') || 
+    q.includes('edema') || 
+    (q.includes('swell') && (q.includes('leg') || q.includes('ankle') || q.includes('feet') || q.includes('shin')))
+  ) {
+    if (currentCase.id === 'cardio-2') {
+      return "When you press your fingers into my shins, it leaves deep pits that take several seconds to bounce back. Both ankles are swollen up to my mid-calves.";
+    }
+    if (currentCase.id === 'cardio-1') {
+      return "No swelling in my legs doctor, but my feet and hands are completely cold and drenched in sweat.";
+    }
+    return "No swelling in my legs, doctor.";
+  }
+
+  return null;
+};
+

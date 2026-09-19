@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import casesData from './cases.json';
-import { CLINICAL_TEACHING_DATA, detectInChatDiagnosis, detectSurrenderPhrase } from './clinicalTeachingData.js';
+import { CLINICAL_TEACHING_DATA, detectInChatDiagnosis, detectSurrenderPhrase, detectBedsideOrderOrExam } from './clinicalTeachingData.js';
 import { CLINICAL_KNOWLEDGE_BASE } from './ragKnowledgeBase.js';
 import { 
   Send, RotateCcw, ChevronDown, HeartPulse, 
@@ -108,7 +108,8 @@ GUIDELINES FOR NATURAL, UN-OVERFITTED CONVERSATION:
 3. NEVER USE MEDICAL JARGON: You are an ordinary layperson, not a physician. Describe your physical feelings simply and plainly.
 4. SPOKEN WORDS ONLY: Output only the direct words you say to the doctor. No asterisks (*...*), no stage directions, no quotes.
 5. NEVER GUESS OR REVEAL YOUR MEDICAL DIAGNOSIS: You do not know medical disease labels (never say "${c.trueDiagnosis}" or "${c.title}"). Even if the doctor asks "what is wrong with you?" or says "you are going to die", answer naturally without naming your medical condition.
-6. NATURAL REASONING: If the doctor asks about your day, food, family, job, vision, or other pains, answer plausibly like a real person without breaking character.`;
+6. NATURAL REASONING: If the doctor asks about your day, food, family, job, vision, or other pains, answer plausibly like a real person without breaking character.
+7. BEDSIDE ORDERS & TESTS: If the doctor orders a diagnostic test (like ECG, troponin, blood tests) or emergency medication, the bedside triage nurses run it immediately and hand the report to the doctor: for ECG confirm the nurse printed the tracing showing findings matching ${c.title}; for troponin report high levels; for meds confirm the nurse gave it to you.`;
 
   return { systemPrompt, paperTitle, paperUrl, paperSource };
 };
@@ -710,7 +711,26 @@ export default function App() {
       return;
     }
 
-    // 3. Normal Dialogue: Call Live Nemotron 550B with fallback
+    // 3. Check for In-Chat Bedside Investigation Orders & Physical Exams
+    const bedsideFinding = detectBedsideOrderOrExam(text, currentCase);
+    if (bedsideFinding) {
+      setIsTyping(true);
+      setTimeout(() => {
+        setIsTyping(false);
+        const bedsideMessage = {
+          id: `bedside-${Date.now()}`,
+          sender: 'patient',
+          text: bedsideFinding,
+          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          sourceCitation: getCaseCitation(currentCase)
+        };
+        setMessages(prev => [...prev, bedsideMessage]);
+        speakPatientText(bedsideFinding);
+      }, 500);
+      return;
+    }
+
+    // 4. Normal Dialogue: Call Live Nemotron 550B with fallback
     setIsTyping(true);
     const { systemPrompt, paperTitle, paperUrl, paperSource } = buildClinicalSystemPrompt(currentCase);
     let replyText = null;
