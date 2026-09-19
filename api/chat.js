@@ -103,11 +103,22 @@ export default async function handler(req, res) {
       }
     }
 
-    // Clean up content (strip <think> tags, outer quotes)
+    // Clean up content (strip <think> tags, roleplay asterisks *...*, outer quotes)
     if (data?.choices?.[0]?.message) {
       let content = data.choices[0].message.content || '';
       content = content.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
       content = content.replace(/Here's a thinking process:[\s\S]*?\n\n/gi, '').trim();
+      
+      // Strip asterisks roleplay actions (e.g. *clutches chest*, *eyes widen in fear*)
+      content = content.replace(/\*[^*]+\*/g, '').trim();
+      
+      // Strip leading parenthetical actions (e.g. (winces in pain))
+      content = content.replace(/^\([^)]+\)\s*/g, '').trim();
+
+      // Normalize whitespace
+      content = content.replace(/\n\s*\n+/g, '\n').replace(/[ \t]+/g, ' ').trim();
+
+      // Strip outer quotation marks if wrapped in quotes
       if ((content.startsWith('"') && content.endsWith('"')) || (content.startsWith('“') && content.endsWith('”'))) {
         content = content.slice(1, -1).trim();
       }
