@@ -5,7 +5,8 @@ import { CLINICAL_KNOWLEDGE_BASE } from './ragKnowledgeBase.js';
 import { 
   Send, RotateCcw, ChevronDown, HeartPulse, 
   Wifi, Battery, Signal, Sparkles, CheckCheck, ExternalLink,
-  Lightbulb, CheckCircle2, AlertCircle, ArrowRight, X, BookOpen
+  Lightbulb, CheckCircle2, AlertCircle, ArrowRight, X, BookOpen,
+  Mic, Volume2, VolumeX
 } from 'lucide-react';
 
 // Clinical Interview Questions Guide for Non-Doctors
@@ -142,7 +143,103 @@ export default function App() {
   ]);
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  const [isAudioMuted, setIsAudioMuted] = useState(false);
+  const [isPlayingAudio, setIsPlayingAudio] = useState(false);
   const messagesEndRef = useRef(null);
+  const recognitionRef = useRef(null);
+
+  // Stop audio speech synthesis
+  const stopAudio = () => {
+    if (typeof window !== 'undefined' && window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+      setIsPlayingAudio(false);
+    }
+  };
+
+  // Speak patient reply using Web Speech Synthesis
+  const speakPatientText = (text) => {
+    if (typeof window === 'undefined' || !window.speechSynthesis) return;
+    if (isAudioMuted) return;
+
+    window.speechSynthesis.cancel();
+
+    // Clean text of quotes and special characters
+    const clean = text
+      .replace(/<[^>]+>/g, '')
+      .replace(/[“"”]/g, '')
+      .replace(/[*_#]/g, '')
+      .trim();
+
+    if (!clean) return;
+
+    const utterance = new SpeechSynthesisUtterance(clean);
+    utterance.lang = 'en-US';
+
+    // Set natural pitch and pacing based on patient demographics
+    if (currentCase.age >= 60) {
+      utterance.rate = 0.95;
+      utterance.pitch = currentCase.gender === 'Female' ? 1.05 : 0.9;
+    } else {
+      utterance.rate = 1.02;
+      utterance.pitch = currentCase.gender === 'Female' ? 1.15 : 0.95;
+    }
+
+    utterance.onstart = () => setIsPlayingAudio(true);
+    utterance.onend = () => setIsPlayingAudio(false);
+    utterance.onerror = () => setIsPlayingAudio(false);
+
+    window.speechSynthesis.speak(utterance);
+  };
+
+  // Toggle Speech-to-Text Voice Recognition
+  const toggleSpeechRecognition = () => {
+    const SpeechRecognition = typeof window !== 'undefined' ? (window.SpeechRecognition || window.webkitSpeechRecognition) : null;
+    if (!SpeechRecognition) {
+      alert("Speech-to-Text microphone input requires Google Chrome, Edge, or Safari.");
+      return;
+    }
+
+    if (isListening) {
+      recognitionRef.current?.stop();
+      setIsListening(false);
+      return;
+    }
+
+    try {
+      stopAudio();
+      const recognition = new SpeechRecognition();
+      recognition.lang = 'en-US';
+      recognition.interimResults = true;
+      recognition.continuous = false;
+
+      recognition.onstart = () => {
+        setIsListening(true);
+      };
+
+      recognition.onresult = (event) => {
+        const transcript = Array.from(event.results)
+          .map(result => result[0].transcript)
+          .join('');
+        setInputText(transcript);
+      };
+
+      recognition.onerror = (event) => {
+        console.warn('Speech recognition error:', event.error);
+        setIsListening(false);
+      };
+
+      recognition.onend = () => {
+        setIsListening(false);
+      };
+
+      recognitionRef.current = recognition;
+      recognition.start();
+    } catch (err) {
+      console.warn('Speech recognition start failed:', err);
+      setIsListening(false);
+    }
+  };
 
   // Auto-scroll to latest message
   const scrollToBottom = () => {
@@ -155,6 +252,11 @@ export default function App() {
 
   // Reset dialogue when case changes
   useEffect(() => {
+    stopAudio();
+    if (isListening) {
+      recognitionRef.current?.stop();
+      setIsListening(false);
+    }
     setMessages([
       {
         id: `case-init-${currentCase.id}`,
@@ -175,6 +277,11 @@ export default function App() {
 
   // Restart current case
   const handleRestart = () => {
+    stopAudio();
+    if (isListening) {
+      recognitionRef.current?.stop();
+      setIsListening(false);
+    }
     setMessages([
       {
         id: `restart-${Date.now()}`,
@@ -238,6 +345,48 @@ export default function App() {
     // Doctor asks to examine / check
     if (q.includes('check') || q.includes('examine') || q.includes('look') || q.includes('listen') || q.includes('stethoscope') || q.includes('touch') || q.includes('feel')) {
       return `Yes doctor, please check whatever you need! I'll hold as still as I can, just please tell me what is happening to me.`;
+    }
+
+    // In-chat Bedside 12-Lead ECG Order
+    if (q.includes('ecg') || q.includes('electrocardiogram') || q.includes('12 lead') || q.includes('12-lead') || q.includes('ekg') || q.includes('strip')) {
+      if (currentCase.id === 'cardio-1') {
+        return "The triage nurse runs the 12-lead ECG immediately: It shows marked ST-segment elevation of 3.5mm in leads II, III, and aVF with reciprocal depressions in I and aVL. Doctor, what does it mean?!";
+      }
+      if (currentCase.id === 'cardio-3') {
+        return "The nurse hands you the 12-lead ECG: Diffuse concave-upward ST-segment elevations across all precordial leads with PR-segment depression in lead II. Leaning forward is the only thing easing my chest.";
+      }
+      if (currentCase.id === 'cardio-4') {
+        return "The monitor shows regular narrow-complex tachycardia at 195 bpm with absent P waves. My heart feels like it is pounding right out of my ribs!";
+      }
+      return "The nurse attaches the leads and prints the ECG for you, doctor. What does the tracing show?";
+    }
+
+    // In-chat Bedside Troponin / Blood tests
+    if (q.includes('troponin') || q.includes('blood test') || q.includes('labs') || q.includes('enzymes') || q.includes('d-dimer') || q.includes('bnp') || q.includes('draw blood')) {
+      if (currentCase.id === 'cardio-1') {
+        return "The stat bedside lab returns: High-sensitivity Cardiac Troponin I is 4.2 ng/mL (critically elevated above normal 0.04). Doctor, please help me with this pressure!";
+      }
+      if (currentCase.id === 'cardio-2') {
+        return "Bedside blood panel: NT-proBNP is critically elevated at 8,450 pg/mL. My breathing is so heavy doctor.";
+      }
+      return "The nurse draws blood from my vein for the urgent lab tests. Please tell me what you find.";
+    }
+
+    // In-chat Emergency Interventions (Aspirin, Oxygen, Nitro, Lasix)
+    if (q.includes('aspirin') || q.includes('nitro') || q.includes('oxygen') || q.includes('lasix') || q.includes('furosemide') || q.includes('o2') || q.includes('spray') || q.includes('morphine')) {
+      if (q.includes('aspirin')) {
+        return "I chewed and swallowed the aspirin tablets the nurse gave me. It tasted bitter, but I took it. My chest is still very tight, doctor.";
+      }
+      if (q.includes('oxygen') || q.includes('o2') || q.includes('mask') || q.includes('cannula')) {
+        return "The nurse placed the oxygen mask over my nose and mouth. The air feels cool and helps me take a breath, but the pressure is still there.";
+      }
+      if (q.includes('nitro')) {
+        return "The nurse sprayed the medicine under my tongue. It tingled and gave me a slight headache, but my chest is still aching.";
+      }
+      if (q.includes('lasix') || q.includes('furosemide')) {
+        return "The nurse pushed the medication into my IV line. I really hope it starts clearing this fluid out of my chest soon.";
+      }
+      return "The nurse administers that into my IV line right away. Doctor, is it going to help me recover?";
     }
 
     // Doctor tells patient to be calm / relax
@@ -365,6 +514,13 @@ export default function App() {
     const text = textToSend.trim();
     if (!text || isTyping || simulationState !== 'active') return;
 
+    // Stop ongoing speech synthesis and listening
+    stopAudio();
+    if (isListening) {
+      recognitionRef.current?.stop();
+      setIsListening(false);
+    }
+
     const userMessage = {
       id: `user-${Date.now()}`,
       sender: 'doctor',
@@ -421,6 +577,7 @@ export default function App() {
         setMessages(prev => [...prev, patientPanicMsg]);
         setEvaluationData(evalPayload);
         setSimulationState('concluded');
+        speakPatientText(patientPanicMsg.text);
       }, 700);
       return;
     }
@@ -466,6 +623,7 @@ export default function App() {
         setMessages(prev => [...prev, patientClosureMsg]);
         setEvaluationData(evalPayload);
         setSimulationState('concluded');
+        speakPatientText(patientReplyText);
       }, 700);
       return;
     }
@@ -529,6 +687,7 @@ export default function App() {
 
     setMessages(prev => [...prev, patientMessage]);
     setIsTyping(false);
+    speakPatientText(replyText);
   };
 
   // Quick Clinical Suggestion Chips tailored to current case
@@ -613,6 +772,26 @@ export default function App() {
             >
               <span className="text-[11px]">Cases</span>
               <ChevronDown className={`w-3 h-3 transition-transform ${showCaseSelector ? 'rotate-180' : ''}`} />
+            </button>
+
+            {/* Patient Audio Voice Toggle */}
+            <button
+              onClick={() => {
+                if (isPlayingAudio) stopAudio();
+                setIsAudioMuted(!isAudioMuted);
+              }}
+              title={isAudioMuted ? "Unmute Patient Voice" : "Mute Patient Voice"}
+              className={`p-1.5 rounded-full transition flex items-center justify-center ${
+                isAudioMuted
+                  ? 'text-slate-500 hover:text-slate-300 hover:bg-slate-800'
+                  : 'text-blue-400 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30'
+              }`}
+            >
+              {isAudioMuted ? (
+                <VolumeX className="w-3.5 h-3.5" />
+              ) : (
+                <Volume2 className={`w-3.5 h-3.5 ${isPlayingAudio ? 'animate-pulse text-emerald-400' : ''}`} />
+              )}
             </button>
 
             {/* Restart Button */}
@@ -774,7 +953,17 @@ export default function App() {
                         <span className="truncate">NCBI StatPearls Grounded</span>
                         <ExternalLink className="w-2.5 h-2.5 shrink-0" />
                       </a>
-                      <span className="text-slate-400 shrink-0">{m.time}</span>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => speakPatientText(m.text)}
+                          title="Play Patient Voice"
+                          className="text-slate-400 hover:text-blue-300 transition p-0.5"
+                        >
+                          <Volume2 className="w-2.5 h-2.5" />
+                        </button>
+                        <span className="text-slate-400">{m.time}</span>
+                      </div>
                     </div>
                   )}
 
@@ -785,7 +974,15 @@ export default function App() {
                     </div>
                   )}
                   {!isDoctor && !m.sourceCitation && (
-                    <div className="flex items-center justify-end gap-1 mt-0.5 text-[9px] text-slate-400">
+                    <div className="flex items-center justify-end gap-1.5 mt-0.5 text-[9px] text-slate-400">
+                      <button
+                        type="button"
+                        onClick={() => speakPatientText(m.text)}
+                        title="Play Patient Voice"
+                        className="text-slate-400 hover:text-blue-300 transition p-0.5"
+                      >
+                        <Volume2 className="w-2.5 h-2.5" />
+                      </button>
                       <span>{m.time}</span>
                     </div>
                   )}
@@ -995,11 +1192,28 @@ export default function App() {
                   type="text"
                   value={inputText}
                   onChange={(e) => setInputText(e.target.value)}
-                  placeholder="Ask patient or diagnose (e.g. 'You are having a...')"
+                  placeholder={isListening ? "Listening to your voice..." : "Ask patient, order bedside ECG, or diagnose..."}
                   disabled={isTyping}
-                  className="w-full bg-[#1e293b] text-slate-100 placeholder-slate-400 text-xs rounded-full pl-3.5 pr-3 py-2 border border-slate-700/70 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition shadow-inner disabled:opacity-50"
+                  className={`w-full bg-[#1e293b] text-slate-100 placeholder-slate-400 text-xs rounded-full pl-3.5 pr-3 py-2 border ${
+                    isListening ? 'border-rose-500 ring-1 ring-rose-500/50' : 'border-slate-700/70'
+                  } focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition shadow-inner disabled:opacity-50`}
                 />
               </div>
+
+              {/* Speech-to-Text Microphone Button */}
+              <button
+                type="button"
+                onClick={toggleSpeechRecognition}
+                disabled={isTyping}
+                title={isListening ? "Listening... click to stop" : "Speak to Patient (Hands-free Voice Input)"}
+                className={`w-8 h-8 rounded-full transition flex items-center justify-center shrink-0 ${
+                  isListening
+                    ? 'bg-rose-600 text-white animate-pulse shadow-lg shadow-rose-600/50'
+                    : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700/60'
+                }`}
+              >
+                <Mic className="w-3.5 h-3.5" />
+              </button>
 
               <button
                 type="submit"
