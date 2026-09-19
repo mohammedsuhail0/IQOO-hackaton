@@ -531,56 +531,84 @@ export const detectBedsideOrderOrExam = (query, currentCase) => {
     return "You listen to my chest with your stethoscope. Everything feels tight and labored, doctor.";
   }
 
-  // 5. Throat / Mouth Inspection & Tongue Depressor
-  if (
-    q.includes('open your mouth') || 
-    q.includes('open mouth') || 
-    q.includes('throat') || 
-    q.includes('tongue depressor') || 
-    q.includes('tonsil') || 
-    q.includes('uvula')
-  ) {
-    if (currentCase.id === 'ent-1') {
-      return "I can barely open my teeth wider than a finger width because of the muscle spasm. You shine your light and see my right tonsil huge, inflamed, and pushing my uvula way to the left side.";
+    // Needle Aspiration & Throat Drainage
+    if (
+      q.includes('needle aspiration') || 
+      q.includes('aspiration') || 
+      q.includes('incision') || 
+      q.includes('drain') || 
+      q.includes('drainage') || 
+      q.includes('swab')
+    ) {
+      if (currentCase.id === 'ent-1') {
+        return "Under local anesthesia, needle aspiration of my right peritonsillar fullness yields 4 mL of thick, foul-smelling purulent pus, immediately relieving my throat pressure and allowing me to breathe easier!";
+      }
+      return "The procedural kit is opened at bedside and sterile cultures are prepared for the microbiology laboratory.";
     }
-    if (currentCase.id === 'ent-4') {
-      return "Please don't put a wooden stick down my throat, doctor! It feels like my airway will clamp shut! I can only breathe sitting up and leaning forward.";
-    }
-    return "I open my mouth for you as best as I can, doctor.";
-  }
 
-  // 6. Ear & Mastoid Inspection & Tuning Fork Tests
-  if (
-    q.includes('otoscope') || 
-    q.includes('mastoid') || 
-    q.includes('behind your ear') || 
-    q.includes('behind ear') || 
-    q.includes('tuning fork') || 
-    q.includes('weber') || 
-    q.includes('rinne')
-  ) {
-    if (currentCase.id === 'ent-3') {
-      return "Ow! Touching behind my left ear is agonizing — the bone is red, swollen, and has pushed my whole ear forward.";
+    // 5. Throat / Mouth Inspection & Tongue Depressor
+    if (
+      q.includes('open your mouth') || 
+      q.includes('open mouth') || 
+      q.includes('look in your throat') || 
+      q.includes('check throat') || 
+      q.includes('examine throat') || 
+      q.includes('tongue depressor') || 
+      q.includes('tonsil') || 
+      q.includes('uvula')
+    ) {
+      if (currentCase.id === 'ent-1') {
+        return "I can barely open my teeth wider than a finger width because of the muscle spasm. You shine your light and see my right tonsil huge, inflamed, and pushing my uvula way to the left side.";
+      }
+      if (currentCase.id === 'ent-4') {
+        return "Please don't put a wooden stick down my throat, doctor! It feels like my airway will clamp shut! I can only breathe sitting up and leaning forward.";
+      }
+      return "I open my mouth for you as best as I can, doctor.";
     }
-    if (currentCase.id === 'ent-5') {
-      return "You inspect with your otoscope: my eardrum looks pearly and intact. When you strike the tuning fork, I only hear it vibrating in my left ear, nothing in my right!";
-    }
-    return "You examine my ear with your light. What does it look like, doctor?";
-  }
 
-  // 7. Dix-Hallpike Maneuver & Positional Vertigo Testing
-  if (
-    q.includes('dix-hallpike') || 
-    q.includes('hallpike') || 
-    q.includes('head turn') || 
-    q.includes('maneuver') || 
-    q.includes('nystagmus')
-  ) {
-    if (currentCase.id === 'ent-2') {
-      return "You quickly lay me back and turn my head 45 degrees to the right: after about 5 seconds, the room violently starts spinning and you can see my eyes jerking in a rapid upward twist!";
+    // 6. Ear & Mastoid Inspection & Tuning Fork Tests
+    if (
+      q.includes('otoscope') || 
+      q.includes('mastoid') || 
+      q.includes('behind your ear') || 
+      q.includes('behind ear') || 
+      q.includes('tuning fork') || 
+      q.includes('weber') || 
+      q.includes('rinne')
+    ) {
+      if (currentCase.id === 'ent-3') {
+        return "Ow! Touching behind my left ear is agonizing — the bone is red, swollen, and has pushed my whole ear forward.";
+      }
+      if (currentCase.id === 'ent-5') {
+        return "You inspect with your otoscope: my eardrum looks pearly and intact. When you strike the tuning fork, I only hear it vibrating in my left ear, nothing in my right!";
+      }
+      return "You examine my ear with your light. What does it look like, doctor?";
     }
-    return "I follow your instructions and move my head as you guide me, doctor.";
-  }
+
+    // Epley Canalith Repositioning Maneuver
+    if (
+      q.includes('epley') || 
+      q.includes('repositioning') || 
+      q.includes('canalith')
+    ) {
+      if (currentCase.id === 'ent-2') {
+        return "You guide me through the 4-step Epley canalith repositioning sequence: after tilting my head through each angle, the dizziness subsides and my room stops spinning!";
+      }
+      return "I follow along as you guide my head through the repositioning sequence, doctor.";
+    }
+
+    // 7. Dix-Hallpike Maneuver & Positional Vertigo Testing
+    if (
+      q.includes('dix-hallpike') || 
+      q.includes('hallpike') || 
+      q.includes('nystagmus') ||
+      (q.includes('maneuver') && !q.includes('vagal') && !q.includes('valsalva'))
+    ) {
+      if (currentCase.id === 'ent-2') {
+        return "You quickly lay me back and turn my head 45 degrees to the right: after about 5 seconds, the room violently starts spinning and you can see my eyes jerking in a rapid upward twist!";
+      }
+      return "I follow your instructions and move my head as you guide me, doctor.";
+    }
 
   // 8. Leg & Ankle Swelling (Pitting Edema)
   if (
@@ -595,6 +623,119 @@ export const detectBedsideOrderOrExam = (query, currentCase) => {
       return "No swelling in my legs doctor, but my feet and hands are completely cold and drenched in sweat.";
     }
     return "No swelling in my legs, doctor.";
+  }
+
+  // 9. Chest X-Ray / Radiograph / CXR / Lateral Neck X-Ray
+  if (
+    q.includes('x-ray') || 
+    q.includes('xray') || 
+    q.includes('radiograph') || 
+    q.includes('cxr') || 
+    q.includes('chest film') || 
+    q.includes('neck film')
+  ) {
+    if (currentCase.id === 'cardio-2') {
+      return "Portable Chest X-Ray report: Marked cardiomegaly, prominent bilateral perihilar bat-wing alveolar opacities, and Kerley B lines indicative of acute interstitial pulmonary edema.";
+    }
+    if (currentCase.id === 'cardio-1') {
+      return "Chest X-Ray report: Clear lung fields bilaterally, normal cardiac silhouette, and no widened mediastinum or pneumothorax.";
+    }
+    if (currentCase.id === 'cardio-3') {
+      return "Chest X-Ray report: Lung fields are clear. Cardiac silhouette is borderline enlarged, but no massive globular 'water-bottle' enlargement yet.";
+    }
+    if (currentCase.id === 'ent-4') {
+      return "Stat lateral soft-tissue neck radiograph: Demonstrates a classic marked 'Thumbprint sign' representing massive swelling of the epiglottis and aryepiglottic folds.";
+    }
+    return "The portable x-ray machine arrives at bedside: the technician takes the film and uploads the images to the viewer for you, doctor.";
+  }
+
+  // 10. Echocardiogram / Ultrasound / POCUS / TTE / TEE
+  if (
+    q.includes('echo') || 
+    q.includes('echocardiogram') || 
+    q.includes('ultrasound') || 
+    q.includes('pocus') || 
+    q.includes('sonogram') || 
+    q.includes('tte') || 
+    q.includes('tee')
+  ) {
+    if (currentCase.id === 'cardio-1') {
+      return "Bedside POCUS Echocardiogram: Demonstrates acute regional wall motion abnormalities with akinesis of the inferior and posterior left ventricular wall; anterior wall motion preserved.";
+    }
+    if (currentCase.id === 'cardio-2') {
+      return "Bedside Echocardiogram: Severely depressed left ventricular systolic function (LVEF ~25%) with global hypokinesia and secondary severe mitral regurgitation.";
+    }
+    if (currentCase.id === 'cardio-3') {
+      return "Bedside Echocardiogram: Small circumferential pericardial effusion without evidence of right ventricular diastolic collapse or hemodynamic tamponade.";
+    }
+    if (currentCase.id === 'cardio-5') {
+      return "Bedside TTE/TEE: Visualizes a mobile 8mm oscillating vegetation on the anterior mitral valve leaflet with moderate regurgitant jet.";
+    }
+    return "The ultrasound machine is brought to my bedside. The sonographer captures the views for your evaluation, doctor.";
+  }
+
+  // 11. CT Scan / CAT Scan / MRI
+  if (
+    q.includes('ct scan') || 
+    q.includes('cat scan') || 
+    q.includes('computed tomography') || 
+    q.includes('mri') || 
+    q.includes('magnetic resonance')
+  ) {
+    if (currentCase.id === 'ent-3') {
+      return "Stat Contrast-Enhanced CT of Temporal Bones: Shows complete opacification of left mastoid air cells with bony trabecular destruction and lateral cortical bone erosion.";
+    }
+    if (currentCase.id === 'ent-5') {
+      return "Brain & Internal Auditory Canal MRI: Normal symmetrical course of 7th and 8th cranial nerve complexes with no evidence of vestibular schwannoma (acoustic neuroma) or cerebellopontine angle mass.";
+    }
+    return "The radiology department confirms the scan order and is preparing the scanner room, doctor.";
+  }
+
+  // 12. Cath Lab Activation / Coronary Angiography (PCI)
+  if (
+    q.includes('cath lab') || 
+    q.includes('catheterization') || 
+    q.includes('angioplasty') || 
+    q.includes('pci') || 
+    q.includes('angiogram') || 
+    q.includes('stent')
+  ) {
+    if (currentCase.id === 'cardio-1') {
+      return "Emergency Cardiac Catheterization Lab is activated! The interventional cardiology team is mobilizing immediately for primary PCI within the 90-minute window!";
+    }
+    return "The cardiology fellow notes your request for catheterization consultation, doctor.";
+  }
+
+  // 14. Pure Tone Audiometry & Hearing Tests
+  if (
+    q.includes('audiometry') || 
+    q.includes('audiogram') || 
+    q.includes('hearing test') || 
+    q.includes('pta')
+  ) {
+    if (currentCase.id === 'ent-5') {
+      return "Stat Pure Tone Audiometry (PTA) report: Confirms a severe 55 dB sensorineural hearing loss across three contiguous frequencies (500, 1000, 2000 Hz) in the right ear.";
+    }
+    return "The audiologist performs the diagnostic hearing exam and prints the audiogram tracing for your chart, doctor.";
+  }
+
+  // 16. Arterial Blood Gas (ABG / VBG) & Electrolytes
+  if (
+    q.includes('abg') || 
+    q.includes('vbg') || 
+    q.includes('blood gas') || 
+    q.includes('arterial blood') || 
+    q.includes('electrolytes') || 
+    q.includes('potassium') || 
+    q.includes('magnesium')
+  ) {
+    if (currentCase.id === 'cardio-2') {
+      return "Stat Arterial Blood Gas (ABG): pH 7.31, PaCO2 48 mmHg, PaO2 58 mmHg, HCO3 24 mEq/L, consistent with acute respiratory acidosis and hypoxemia on room air.";
+    }
+    if (currentCase.id === 'cardio-4') {
+      return "Stat Electrolyte Panel: Potassium 4.1 mEq/L, Magnesium 2.0 mg/dL, Sodium 139 mEq/L, within normal limits.";
+    }
+    return "Stat blood gas sample drawn from radial artery: shows PaO2 76 mmHg with mild respiratory alkalosis.";
   }
 
   return null;
