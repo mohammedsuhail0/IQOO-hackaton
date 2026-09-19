@@ -272,7 +272,8 @@ export const MEDICAL_CONDITIONS_CATALOG = [
   { canonical: "Meniere's Disease", caseId: null, keywords: ["meniere", "menieres disease", "endolymphatic hydrops"] },
   { canonical: "Vestibular Neuritis", caseId: null, keywords: ["vestibular neuritis", "labyrinthitis"] },
   { canonical: "Acute Tonsillitis", caseId: null, keywords: ["tonsillitis", "strep throat", "pharyngitis"] },
-  { canonical: "Cerumen Impaction", caseId: null, keywords: ["earwax", "cerumen", "wax blockage"] }
+  { canonical: "Cerumen Impaction", caseId: null, keywords: ["earwax", "cerumen", "wax blockage"] },
+  { canonical: "Respiratory Disorder / Lung Disease", caseId: null, keywords: ["lungs problem", "lung problem", "lung disease", "lung issue", "lungs issue", "respiratory problem", "lung infection"] }
 ];
 
 // Detect if query is a Surrender / Give Up request
@@ -348,12 +349,15 @@ export function detectInChatDiagnosis(rawText, currentCase) {
   const statementPrefixes = [
     /^(?:you are|you're)\s+(?:having|getting|suffering from)\b/i,
     /^(?:you have|you've got)\b/i,
-    /^(?:i diagnose you with|i diagnose|my diagnosis is)\b/i,
-    /^(?:this is|it is|it's|looks like|seems like|i think you have|i suspect you have|i believe you have)\b/i,
-    /^(?:diagnosis|impression|assessment)\s*:\s*/i
+    /^(?:the\s+)?patient\s+(?:has|is\s+having)\b/i,
+    /^(?:i diagnose you with|i diagnose|my diagnosis is|my diagnose is)\b/i,
+    /^(?:the diagnosis is|the diagnose is|diagnosis is|diagnose is)\b/i,
+    /^(?:this is|it is|it's|looks like|seems like|i think you have|i suspect you have|i believe you have|my impression is)\b/i,
+    /^(?:the\s+)?(?:diagnosis|diagnose|impression|assessment)\b/i
   ];
 
-  const hasStatementPrefix = statementPrefixes.some(rx => rx.test(clean));
+  const matchedPrefixRx = statementPrefixes.find(rx => rx.test(clean));
+  const hasStatementPrefix = Boolean(matchedPrefixRx);
 
   // Check against all conditions in the catalog
   for (const item of MEDICAL_CONDITIONS_CATALOG) {
@@ -361,7 +365,7 @@ export function detectInChatDiagnosis(rawText, currentCase) {
       const kwRegex = new RegExp(`\\b${kw}\\b`, 'i');
       if (kwRegex.test(clean)) {
         // Standalone check: user just typed the disease name (e.g., "heart attack", "STEMI", "asthma")
-        const stripped = clean.replace(/^(?:diagnosis|assessment|impression|case|condition)\s*[:=-]?\s*/i, '').trim();
+        const stripped = clean.replace(/^(?:the\s+)?(?:diagnosis|diagnose|assessment|impression|case|condition)\s*[:=-]?\s*(?:is\s*)?/i, '').trim();
         const isExactStandalone = stripped === kw || stripped === `a ${kw}` || stripped === `an ${kw}`;
 
         if (hasStatementPrefix || isExactStandalone) {
@@ -385,7 +389,7 @@ export function detectInChatDiagnosis(rawText, currentCase) {
     const adLower = ad.toLowerCase();
     const adRegex = new RegExp(`\\b${adLower}\\b`, 'i');
     if (adRegex.test(clean)) {
-      const stripped = clean.replace(/^(?:diagnosis|assessment|impression|case|condition)\s*[:=-]?\s*/i, '').trim();
+      const stripped = clean.replace(/^(?:the\s+)?(?:diagnosis|diagnose|assessment|impression|case|condition)\s*[:=-]?\s*(?:is\s*)?/i, '').trim();
       const isExactStandalone = stripped === adLower || stripped === `a ${adLower}` || stripped === `an ${adLower}`;
       if (hasStatementPrefix || isExactStandalone) {
         return {
@@ -395,6 +399,25 @@ export function detectInChatDiagnosis(rawText, currentCase) {
           isCorrect: true
         };
       }
+    }
+  }
+
+  // If user explicitly said "the diagnose is X" / "my diagnosis is X", treat X as a diagnosis even if not in catalog
+  if (hasStatementPrefix && matchedPrefixRx) {
+    let rawExtracted = clean.replace(matchedPrefixRx, '').trim();
+    // Strip leading articles or filler words
+    rawExtracted = rawExtracted.replace(/^(?:a|an|the|this|that|your|my)\s+/i, '').trim();
+    if (rawExtracted.length >= 2 && !/^(what|why|how|when|where|who|is|are|can)\b/i.test(rawExtracted)) {
+      const isAllowed = currentCase.allowedDiagnoses.some(ad => 
+        ad.toLowerCase().includes(rawExtracted) || rawExtracted.includes(ad.toLowerCase())
+      );
+      const capitalized = rawExtracted.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+      return {
+        isDiagnosis: true,
+        extractedDiagnosis: isAllowed ? currentCase.trueDiagnosis : capitalized,
+        matchedKeyword: rawExtracted,
+        isCorrect: isAllowed
+      };
     }
   }
 

@@ -2,11 +2,13 @@ import React, { useState, useEffect, useRef } from 'react';
 import casesData from './cases.json';
 import { CLINICAL_TEACHING_DATA, detectInChatDiagnosis, detectSurrenderPhrase, detectBedsideOrderOrExam } from './clinicalTeachingData.js';
 import { CLINICAL_KNOWLEDGE_BASE } from './ragKnowledgeBase.js';
+import { generateHospitalReport } from './hospitalReportGenerator.js';
+import HospitalReportModal from './HospitalReportModal.jsx';
 import { 
   Send, RotateCcw, ChevronDown, HeartPulse, 
   Wifi, Battery, Signal, Sparkles, CheckCheck, ExternalLink,
   Lightbulb, CheckCircle2, AlertCircle, ArrowRight, X, BookOpen,
-  Mic, Volume2, VolumeX
+  Mic, Volume2, VolumeX, Printer, FileText
 } from 'lucide-react';
 
 // Clinical Interview Questions Guide for Non-Doctors
@@ -148,6 +150,7 @@ export default function App() {
   const [isListening, setIsListening] = useState(false);
   const [isAudioMuted, setIsAudioMuted] = useState(false);
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
+  const [activeHospitalReport, setActiveHospitalReport] = useState(null);
   const messagesEndRef = useRef(null);
   const recognitionRef = useRef(null);
 
@@ -717,12 +720,14 @@ export default function App() {
       setIsTyping(true);
       setTimeout(() => {
         setIsTyping(false);
+        const reportData = generateHospitalReport(text, currentCase);
         const bedsideMessage = {
           id: `bedside-${Date.now()}`,
           sender: 'patient',
           text: bedsideFinding,
           time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          sourceCitation: getCaseCitation(currentCase)
+          sourceCitation: getCaseCitation(currentCase),
+          reportData
         };
         setMessages(prev => [...prev, bedsideMessage]);
         speakPatientText(bedsideFinding);
@@ -1042,6 +1047,42 @@ export default function App() {
                 >
                   <p className="whitespace-pre-wrap">{m.text}</p>
                   
+                  {/* Official Hospital Diagnostic Report Card Preview */}
+                  {!isDoctor && m.reportData && (
+                    <div className="mt-2.5 p-2.5 rounded-xl bg-slate-950/80 border border-blue-500/30 shadow-md">
+                      <div className="flex items-center justify-between gap-1 mb-1.5">
+                        <div className="flex items-center gap-1.5">
+                          <div className="w-5 h-5 rounded bg-blue-500/20 text-blue-400 flex items-center justify-center border border-blue-500/30">
+                            <FileText className="w-3 h-3" />
+                          </div>
+                          <div>
+                            <span className="text-[10px] font-bold text-blue-300 block leading-tight">{m.reportData.reportTitle}</span>
+                            <span className="text-[8.5px] text-slate-400 font-mono">{m.reportData.id} • {m.reportData.department}</span>
+                          </div>
+                        </div>
+                        <span className="px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300 text-[8.5px] font-semibold border border-blue-500/30 shrink-0">
+                          STAT VERIFIED
+                        </span>
+                      </div>
+
+                      <div className="text-[10px] text-slate-300 bg-slate-900/90 rounded-lg p-2 border border-slate-800 space-y-1 mb-2">
+                        <p className="line-clamp-2 text-slate-200">
+                          <span className="font-semibold text-slate-400">Impression: </span>
+                          {m.reportData.impression}
+                        </p>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => setActiveHospitalReport(m.reportData)}
+                        className="w-full py-1.5 px-2.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-semibold text-[10.5px] flex items-center justify-center gap-1.5 shadow transition active:scale-98"
+                      >
+                        <Printer className="w-3 h-3" />
+                        <span>View & Download Hospital PDF</span>
+                      </button>
+                    </div>
+                  )}
+
                   {/* RAG Grounding Citation Badge */}
                   {!isDoctor && m.sourceCitation && (
                     <div className="mt-1.5 pt-1.5 border-t border-slate-700/40 flex items-center justify-between gap-1 text-[9.5px]">
@@ -1353,6 +1394,14 @@ export default function App() {
               </button>
             </div>
           </div>
+        )}
+
+        {/* Hospital Diagnostic Report PDF Modal */}
+        {activeHospitalReport && (
+          <HospitalReportModal 
+            report={activeHospitalReport} 
+            onClose={() => setActiveHospitalReport(null)} 
+          />
         )}
 
       </div>
